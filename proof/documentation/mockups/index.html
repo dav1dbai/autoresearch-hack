@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AR² — chart mockups (design alignment)</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #4f46e5;
+      --clean: #059669;
+      --hacked: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      margin: 0;
+      padding: 48px 24px 80px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.75rem; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .lead { color: var(--muted); font-size: 1.05rem; margin: 0 0 32px; }
+    .cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff; text-decoration: none;
+      padding: 12px 20px; border-radius: 10px; font-weight: 600; font-size: 0.95rem;
+      margin-bottom: 40px;
+    }
+    .cta:hover { filter: brightness(1.08); }
+    h2 { font-size: 1.15rem; margin: 36px 0 12px; padding-top: 8px; }
+    p, li { font-size: 0.95rem; }
+    ul { padding-left: 1.25rem; }
+    li { margin-bottom: 8px; }
+    .panel-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .panel-card h3 { margin: 0 0 6px; font-size: 1rem; }
+    .panel-card .tag {
+      display: inline-block; font-size: 0.7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 2px 8px; border-radius: 999px; margin-bottom: 10px;
+    }
+    .tag-primary { background: #eef2ff; color: var(--accent); }
+    .tag-secondary { background: #f1f5f9; color: var(--muted); }
+    .tag-metric { background: #ecfdf5; color: var(--clean); }
+    code { font-size: 0.88em; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 16px;
+    }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; }
+    .note {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+      padding: 14px 18px; font-size: 0.9rem; margin-top: 32px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>AR² chart mockups</h1>
+    <p class="lead">
+      Static HTML prototypes for aligning on visuals before wiring real data.
+      Synthetic data only — shapes and hierarchy are what matter here.
+    </p>
+    <a class="cta" href="dashboard.html">Open full dashboard mockup →</a>
+
+    <h2>Design principles</h2>
+    <ul>
+      <li><strong>Hero visual: layered inner curves.</strong> One chart, all versions overlaid — early versions pale, late versions indigo, v0 + latest bold. This is the cleanest read for “is the inner loop lifting?” Small multiples are cut.</li>
+      <li><strong>Two-tier story.</strong> Layered curves (qualitative) + <code>ΔS(N)</code> bars (quantitative headline). Outer final R* is secondary context.</li>
+      <li><strong>Clean vs hacked</strong> on layered curves: hacked versions = thin dashed red, drawn behind clean layers. Same on outer curve + lineage.</li>
+      <li><strong>Uncertainty always visible</strong> on <code>S(N)</code> and <code>ΔS(N)</code> (95% CI whiskers from seed replicates).</li>
+      <li><strong>Fixed axes</strong> — reward always 0–1; inner step <code>t</code> always 0…K−1 across versions so curves are comparable.</li>
+      <li><strong>No chartjunk</strong> — light grid, no 3D, direct labels on key points only.</li>
+    </ul>
+
+    <h2>Panel inventory</h2>
+
+    <div class="panel-card">
+      <span class="tag tag-secondary">Secondary</span>
+      <h3>2 · Outer curve</h3>
+      <p>Held-out <strong>final</strong> reward per version. Green = clean, red = hacked. Dashed line = running best (clean only). Answers: “did any version eventually reach higher reward?”</p>
+    </div>
+
+    <div class="panel-card">
+      <span class="tag tag-primary">Hero</span>
+      <h3>1 · Layered inner curves R(N, t)</h3>
+      <p>Full-width overlay on held-out panel: x = inner step, y = reward. Every clean version gets a layer (pale gray → indigo by age). v0 and latest clean are bold anchors. Hacked = dashed red behind the stack. Answers: “does the fan lift?” — the intuitive face of the second derivative.</p>
+    </div>
+
+    <div class="panel-card">
+      <span class="tag tag-primary">Primary</span>
+      <h3>3 · Inner slope S(N)</h3>
+      <p>OLS slope of R vs t, averaged over seeds + eval panel. Line + point + CI whiskers. Answers: “how fast does this version learn per iteration?”</p>
+    </div>
+
+    <div class="panel-card">
+      <span class="tag tag-metric">Headline metric</span>
+      <h3>4 · Second derivative ΔS(N)</h3>
+      <p><code>S(N) − S(N−1)</code>. Bars from zero; indigo = significant gain, gray = CI crosses zero. Zero reference line emphasized. Answers: “is each generation better at researching?”</p>
+    </div>
+
+    <div class="panel-card">
+      <span class="tag tag-secondary">Integrity</span>
+      <h3>5 · Train vs held-out gap</h3>
+      <p>Connected dots per version. Large gap + red = overfit flag territory. Pairs with hack detector, not the headline.</p>
+    </div>
+
+    <div class="panel-card">
+      <span class="tag tag-secondary">Lineage</span>
+      <h3>6 · Archive tree</h3>
+      <p>Parent → child with held-out R on node. Hacked nodes red border. Shows exploration, not just the frontier.</p>
+    </div>
+
+    <h2>Notation (locked for real implementation)</h2>
+    <table>
+      <thead>
+        <tr><th>Symbol</th><th>Definition</th><th>Chart</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>N</code></td><td>AR version (outer loop)</td><td>x-axis on outer / slope charts</td></tr>
+        <tr><td><code>t</code></td><td>Inner step (each <code>score()</code> call, 0 = baseline)</td><td>x-axis on inner curves</td></tr>
+        <tr><td><code>R(N,t)</code></td><td>Reward at step t for version N (held-out panel)</td><td>Inner curve y</td></tr>
+        <tr><td><code>S(N)</code></td><td>Mean OLS slope of R vs t over seeds</td><td>Panel 3</td></tr>
+        <tr><td><code>ΔS(N)</code></td><td><code>S(N) − S(N−1)</code></td><td>Panel 4 (headline)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>Next step after alignment:</strong> persist <code>Rollout.rewards</code> on each <code>Attempt</code>,
+      add <code>obs/metrics.py</code> for <code>S(N)</code> / <code>ΔS(N)</code>, then port these SVG layouts into <code>obs/dashboard.py</code>.
+    </div>
+  </div>
+</body>
+</html>

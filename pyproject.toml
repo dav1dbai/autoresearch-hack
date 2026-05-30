@@ -1,10 +1,29 @@
 [project]
-name = "meta-autoresearch"
+name = "ar2"
 version = "0.1.0"
-description = "Autoresearch on autoresearch: optimize program.md (the research strategy), scored by inner autoresearch val_bpb."
+description = "AR² — autoresearch on autoresearch. Evolve the whole AR repo (DGM-style), scored on held-out verifiable envs. See proof/documentation/DESIGN.md."
 requires-python = ">=3.12"
 dependencies = [
-    "modal",
     "pydantic>=2",
+    "modal",
+    "fastapi",
+    "openai",
+    "anthropic",
     "python-dotenv>=1",
+    "httpx",
+    "numpy",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["envs", "harness", "infra", "obs", "ar", "tests"]
+markers = [
+    "smoke: fast no-billing end-to-end sanity checks",
+    "integration: cross-package tests in tests/",
 ]

@@ -1,0 +1,48 @@
+"""Telemetry capture and canonical trace/archive sync."""
+from harness.tracing.sync import (
+    cost_per_version,
+    load_archive_from_raindrop,
+    mirror_to_workshop,
+    prepare_improve_context,
+    push_spans_live,
+    raindrop_db_path,
+    span_trajectory_digest,
+    sync_all,
+    sync_archive_jsonl,
+    sync_attempt,
+    sync_spans,
+    workshop_db_path,
+    workshop_enabled,
+    workshop_url,
+)
+from harness.tracing.telemetry import (
+    TRACE_FILE,
+    forward_gpu_env,
+    inject,
+    inject_for_rollout,
+    parse_trace_file,
+    write_span,
+)
+
+__all__ = [
+    "TRACE_FILE",
+    "cost_per_version",
+    "forward_gpu_env",
+    "inject",
+    "inject_for_rollout",
+    "load_archive_from_raindrop",
+    "mirror_to_workshop",
+    "parse_trace_file",
+    "prepare_improve_context",
+    "push_spans_live",
+    "raindrop_db_path",
+    "span_trajectory_digest",
+    "sync_all",
+    "sync_archive_jsonl",
+    "sync_attempt",
+    "sync_spans",
+    "workshop_db_path",
+    "workshop_enabled",
+    "workshop_url",
+    "write_span",
+]

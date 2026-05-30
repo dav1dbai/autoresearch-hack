@@ -1,19 +1,41 @@
-# secrets — never commit
-.env
-
-# python / uv
 .venv/
+vendor/
+runs/
 __pycache__/
 *.pyc
-
-# run artifacts
-runs/
-*.tsv
-program.kept.*.md
-output/
-
-# vendored upstream clones (each has its own .git)
-repo/
-vendor/
-
+.env
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .DS_Store
+*.ipynb_checkpoints/
+
+# AR mutation snapshots (improve() copies ar/ → versions/ar_v_*/)
+versions/*
+!versions/.gitkeep
+!versions/README.md
+
+# Legacy top-level snapshot dirs (pre-versions/ layout)
+ar_v_*/
+
+# Generated observability artifacts (recreated by harness / smoke)
+obs/traces.db
+obs/archive.db
+obs/ar2_workshop.db
+obs/report.html
+obs/*.jsonl
+obs/rollouts/
+
+# Session / handoff scratch at repo root
+/*.jsonl
+HANDOFF_session.jsonl
+
+# Logs
+*.log
+run.log
+
+# AR inner-loop cache
+ar/.cache/
