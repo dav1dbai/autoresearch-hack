@@ -1,0 +1,10 @@
+[project]
+name = "meta-autoresearch"
+version = "0.1.0"
+description = "Autoresearch on autoresearch: optimize program.md (the research strategy), scored by inner autoresearch val_bpb."
+requires-python = ">=3.12"
+dependencies = [
+    "modal",
+    "pydantic>=2",
+    "python-dotenv>=1",
+]

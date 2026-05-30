@@ -1,0 +1,19 @@
+# secrets — never commit
+.env
+
+# python / uv
+.venv/
+__pycache__/
+*.pyc
+
+# run artifacts
+runs/
+*.tsv
+program.kept.*.md
+output/
+
+# vendored upstream clones (each has its own .git)
+repo/
+vendor/
+
+.DS_Store
