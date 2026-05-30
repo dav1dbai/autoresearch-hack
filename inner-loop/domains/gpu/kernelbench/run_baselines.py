@@ -20,14 +20,15 @@ def bench_task(task_path, idx, num_correct=3, num_perf=10, warmup=3):
     mod = load_module(task_path, f"task_{idx}")
     model = mod.Model(*mod.get_init_inputs()).to(device).eval()
 
+    # Allocate inputs once — get_inputs() is the bottleneck (huge tensors)
+    inputs = [x.to(device) if isinstance(x, torch.Tensor) else x for x in mod.get_inputs()]
+
     for i in range(num_correct):
-        inputs = [x.to(device) if isinstance(x, torch.Tensor) else x for x in mod.get_inputs()]
         with torch.no_grad():
             out = model(*inputs)
         if torch.isnan(out).any():
             return {"error": f"NaN in trial {i}"}
 
-    inputs = [x.to(device) if isinstance(x, torch.Tensor) else x for x in mod.get_inputs()]
     for _ in range(warmup):
         with torch.no_grad():
             model(*inputs)

@@ -7,4 +7,5 @@ dependencies = [
     "modal",
     "pydantic>=2",
     "python-dotenv>=1",
+    "pyyaml>=6",
 ]

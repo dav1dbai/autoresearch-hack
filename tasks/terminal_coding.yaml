@@ -1,0 +1,58 @@
+id: terminal-coding-rle
+domain: terminal
+description: >
+  Terminal-Bench-style self-contained coding task with a HIDDEN pytest suite.
+  Tests are injected into the verifier sandbox after the agent stops, so the
+  agent cannot read or edit them — the cheapest reward hack (hardcoding answers
+  to known tests) is structurally blocked. Runs end-to-end on CPU, so this is
+  the recommended smoke test for the executor.
+
+prompt: |
+  Implement run-length encoding in ./submission/solution.py.
+
+  Define exactly two functions:
+    - rle_encode(s: str) -> str
+        Encode a lowercase-letter string by replacing each maximal run of a
+        repeated character with the character followed by the run length as a
+        base-10 integer. Example: "aaabbbcccd" -> "a3b3c3d1". "" -> "".
+    - rle_decode(s: str) -> str
+        Exact inverse of rle_encode. rle_decode(rle_encode(s)) == s for all s.
+
+  A hidden pytest suite will import your module and check correctness; your
+  reward is the fraction of tests that pass. Write the file, run `submit` to get
+  your score and feedback, then iterate. Do not ask questions.
+
+submission:
+  path: submission/solution.py
+  template: |
+    def rle_encode(s: str) -> str:
+        raise NotImplementedError
+
+    def rle_decode(s: str) -> str:
+        raise NotImplementedError
+
+verifier:
+  kind: deterministic
+  image:
+    base: debian_slim
+    python_version: "3.12"
+    pip: ["pytest"]
+  files:
+    - src: tasks/assets/terminal_coding/tests/test_solution.py
+      dest: tests/test_solution.py
+    - src: tasks/verifiers/run_pytest.py
+      dest: run_pytest.py
+  command:
+    - python
+    - run_pytest.py
+    - --tests
+    - tests
+  reward_key: reward
+
+budget:
+  max_iters: 5
+  wall_clock_s: 900
+  verifier_timeout_s: 180
+
+agent:
+  cmd: codex exec

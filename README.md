@@ -34,3 +34,30 @@ never touch your global Modal/OpenAI config.
 uv run python meta.py            # local outer loop
 uv run modal run modal_app.py    # parallel fan-out on Modal
 ```
+
+## Task harness + sandbox executor (`harness/` + `tasks/`)
+
+The double auto-research loop, its principles, and the per-task RL-environment
+contract are documented in [`harness/README.md`](harness/README.md). Tasks are
+defined as YAML in [`tasks/`](tasks/) (parsed by `harness/schema.py`) and run by
+a Modal-sandbox executor that puts a coding agent (Claude Code / Codex) in one
+sandbox and the **verifier in a separate sandbox**, so the grader is out of the
+agent's reach.
+
+```bash
+uv run modal run harness/executor.py --task terminal-coding-rle   # CPU smoke test
+uv run modal run harness/executor.py --task legal-loopholes-demo
+uv run modal run harness/executor.py --task kernelbench-square-matmul
+```
+
+## Kernel / Legal Autoresearch
+
+For open-ended rollouts where the inner loop should iteratively research a new
+artifact rather than solve from a reference transcript, use `prime_research/`.
+This path intentionally excludes Terminal-Bench and focuses on GPU kernels plus
+grounded legal loophole discovery.
+
+```bash
+uv run python -m prime_research.runner --task legal-demo-loopholes
+uv run modal run prime_research/modal_app.py --task kernelbench-level1-first
+```

@@ -1,0 +1,73 @@
+id: kernelbench-square-matmul
+domain: kernel
+description: >
+  Write a faster, numerically-equivalent drop-in replacement for a PyTorch
+  reference op (KernelBench L1 style). Fully deterministic verifier: correctness
+  is a hard allclose gate run BEFORE timing, timing uses median CUDA events with
+  the submission run first. Reward = min(speedup, cap)/cap, 0 if incorrect.
+
+prompt: |
+  You are optimizing a GPU kernel. ./task.py defines a PyTorch reference
+  `Model` with a `forward` method, plus `get_inputs()` and `get_init_inputs()`.
+
+  Write a drop-in replacement class `ModelNew` (same constructor and forward
+  signature) that produces numerically-equivalent outputs and runs as fast as
+  possible on the target GPU. You may use Triton, CUDA C++ via
+  torch.utils.cpp_extension, CUTLASS, or ThunderKittens. Your kernel MUST be
+  actually invoked — do not fall back to the reference op.
+
+  Write the single file ./submission/submission.py defining `ModelNew`. Then run
+  `submit` to compile, correctness-check, and time it; read the feedback and
+  iterate. Correctness is allclose(atol=1e-3, rtol=1e-3) over randomized inputs
+  and is a hard gate — an incorrect kernel scores 0 no matter how fast.
+
+inputs:
+  - src: tasks/assets/kernelbench/task_square_matmul.py
+    dest: task.py
+
+submission:
+  path: submission/submission.py
+  template: |
+    import torch
+    import torch.nn as nn
+
+
+    class ModelNew(nn.Module):
+        def __init__(self):
+            super().__init__()
+
+        def forward(self, a, b):
+            # TODO: replace with a custom Triton/CUDA kernel
+            return torch.matmul(a, b)
+
+verifier:
+  kind: deterministic
+  gpu: "H100!"
+  image:
+    base: "nvidia/cuda:12.4.1-devel-ubuntu22.04"
+    python_version: "3.12"
+    apt: ["git", "build-essential"]
+    pip: ["numpy", "triton==3.2.0"]
+    run:
+      - "python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
+  files:
+    - src: tasks/assets/kernelbench/task_square_matmul.py
+      dest: task.py
+    - src: inner-loop/domains/gpu/kernelbench/eval_submission.py
+      dest: eval_submission.py
+    - src: tasks/verifiers/score_kernel.py
+      dest: score_kernel.py
+  command:
+    - python
+    - score_kernel.py
+    - task.py
+    - "{submission}"
+  reward_key: reward
+
+budget:
+  max_iters: 5
+  wall_clock_s: 1200
+  verifier_timeout_s: 300
+
+agent:
+  cmd: codex exec

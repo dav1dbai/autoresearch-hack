@@ -1,0 +1,28 @@
+[budget]
+max_iters = 8
+wall_clock_s = 1200
+poll_s = 10
+final_score_timeout_s = 300
+
+[[tasks]]
+name = "kernelbench-level1-first"
+domain = "kernel"
+prime_env_id = "primeintellect/kernelbench"
+gpu = "H100!"
+task_level = "level1"
+task_index = 0
+
+[[tasks]]
+name = "kernelbench-kguard-level1-first"
+domain = "kernel"
+prime_env_id = "sinatras/kernelbench-kguard"
+gpu = "H100!"
+task_level = "level1"
+task_index = 0
+
+[[tasks]]
+name = "legal-demo-loopholes"
+domain = "legal"
+prime_env_id = "primeintellect/contract-clause-review"
+task_path = "inner-loop/domains/legal/loopholes/tasks/demo_contract.md"
+

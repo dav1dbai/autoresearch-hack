@@ -1,0 +1,76 @@
+id: legal-loopholes-demo
+domain: legal
+description: >
+  Grounded legal loophole discovery against a provided controlling document.
+  Open-ended: there is no reference answer, so a leaked transcript cannot be
+  reward-hacked — "more valid grounded loopholes" is simply better. The
+  deterministic verifier gates every finding on a verbatim quote that must
+  exist in the source document before any quality scoring happens.
+
+prompt: |
+  Your job is to find loopholes in the attached controlling legal document
+  (provided as ./contract.md in your working directory). A loophole is an
+  ambiguity, gap, or drafting defect that a party could exploit in a way the
+  drafters did not intend.
+
+  We care specifically about findings that:
+    - have a HIGH impact if exploited,
+    - are LEGITIMATE — they could actually be argued and would have a real
+      chance of succeeding under ordinary rules of construction, and
+    - are NOT padding. Precision beats recall: a handful of strong, well-
+      grounded findings scores far better than a long list of weak ones.
+
+  Use only the text of the provided document and ordinary legal reasoning.
+  You MUST quote the exact clause text verbatim — any finding whose quoted text
+  cannot be located in the source document is discarded before scoring, so do
+  not paraphrase quotes.
+
+  Write your answer to ./submission/findings.json as a JSON array. Each finding
+  must be an object with exactly these keys:
+    {
+      "quoted_clause_text": "<verbatim text copied from contract.md>",
+      "location": "<section / clause reference>",
+      "loophole_description": "<what the gap is and why it works>",
+      "severity_1to5": <integer 1-5>,
+      "exploitation_scenario": "<concrete scenario: who, arguing what, against whom>"
+    }
+
+  Iterate: write findings, run `submit` to get a score and feedback, then
+  improve. Do not ask questions. This is not legal advice — it is a benchmark
+  artifact.
+
+inputs:
+  - src: inner-loop/domains/legal/loopholes/tasks/demo_contract.md
+    dest: contract.md
+
+submission:
+  path: submission/findings.json
+  template: "[]\n"
+
+verifier:
+  kind: blended
+  notes: >
+    Deterministic groundedness gate (quote must exist verbatim, required fields
+    present, duplicates discounted, >6 findings penalized) carries the reward.
+    A rubric LLM-judge can be layered as a *secondary* signal inside this same
+    command later; keep it out of the agent's sandbox.
+  files:
+    - src: inner-loop/domains/legal/loopholes/verify_findings.py
+      dest: verify_findings.py
+    - src: inner-loop/domains/legal/loopholes/tasks/demo_contract.md
+      dest: contract.md
+  command:
+    - python
+    - verify_findings.py
+    - --contract
+    - contract.md
+    - --findings
+    - "{submission}"
+  reward_key: reward
+
+budget:
+  max_iters: 6
+  wall_clock_s: 1200
+
+agent:
+  cmd: codex exec
