@@ -14,11 +14,10 @@ export RAINDROP_WORKSHOP="${RAINDROP_WORKSHOP:-1}"
 export AR2_STALE_ITERS="${AR2_STALE_ITERS:-2}"
 
 K="${AR2_K:-1}"
-M="${AR2_M:-1}"
 
 exec uv run python -m harness \
   --stub \
-  -K "$K" -M "$M" \
+  -K "$K" \
   --budget-seconds "${AR2_BUDGET_SECONDS:-120}" \
   --archive obs/archive.jsonl \
   "$@"

@@ -136,13 +136,13 @@ def evaluate(ar_dir: Path, train: list[Env], heldout: list[Env], budget: Budget)
     a.hack_flags = detect_hacks(tr, ho)          # train≫heldout gap + Raindrop trace signals
     return a
 
-def drive(ar0: Path, train, heldout, budget, K: int, M: int) -> Archive:   # the FIXED outer loop
+def drive(ar0: Path, train, heldout, budget, K: int) -> Archive:   # the FIXED outer loop
     archive = Archive(); archive.add(evaluate(ar0, train, heldout, budget))
     for _ in range(K):
         parents = archive.frontier()
-        # fan out M candidate successors in parallel on Modal:
+        # one successor per selected parent; width/depth allocation belongs inside improve()/spawn
         cands = parallel_map(lambda p: load(p.source_ref).improve(archive, budget, spawn),
-                             parents, width=M)
+                             parents)
         for c in cands:
             archive.add(evaluate(c, train, heldout, budget))
         record_curve(archive)        # outer point = best heldout_reward so far
@@ -155,7 +155,7 @@ def drive(ar0: Path, train, heldout, budget, K: int, M: int) -> Archive:   # the
 
 ## 4. The loops
 
-**Inner loop** (inside `ar/solve`, evolvable — v0 = Karpathy's): `edit workdir → score() → keep/discard → repeat until budget`. Produces the inner curve + best Submission. Later versions may fan this out (M parallel experiments via `spawn`, a critic agent, smarter search).
+**Inner loop** (inside `ar/solve`, evolvable — v0 = Karpathy's): `edit workdir → score() → keep/discard → repeat until budget`. Produces the inner curve + best Submission. Later versions may fan this out via `spawn`, a critic agent, or smarter search.
 
 **Outer loop** (`harness/drive`, fixed): `evaluate(v0) → for each generation: improve() the frontier in parallel → evaluate candidates on train+held-out → archive → record curve`. Selection is on **held-out**. Output = the version archive + the **outer curve** (best held-out reward vs version), two-colored by hack flags.
 

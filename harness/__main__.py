@@ -8,7 +8,7 @@ Usage:
     AR2_BACKEND=modal AR2_GPU_BACKEND=vast uv run python -m harness --gpu --vast-rent -K 1
 
     # Modal agents + Modal GPU matmul:
-    AR2_BACKEND=modal uv run python -m harness --gpu -K 1 -M 1
+    AR2_BACKEND=modal uv run python -m harness --gpu -K 1
 """
 from __future__ import annotations
 
@@ -46,7 +46,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="AR² outer loop driver")
     parser.add_argument("--ar-dir", type=Path, default=Path("ar"), help="Path to ar/ snapshot")
     parser.add_argument("-K", type=int, default=0, help="Meta generations after v0")
-    parser.add_argument("-M", type=int, default=1, help="Candidates per frontier parent")
     parser.add_argument(
         "--budget-seconds",
         type=float,
@@ -208,7 +207,6 @@ def main() -> None:
         heldout,
         budget,
         args.K,
-        args.M,
         _persist_path=args.archive,
         _traces_db=args.traces_db,
         _archive_db=args.archive_db,

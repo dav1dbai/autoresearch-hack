@@ -65,7 +65,7 @@ def test_loop_turns_and_report_renders(tmp_path):
 
     archive = drive(
         ar0, train, heldout, Budget(wall_seconds=1.0),
-        K=2, M=1,
+        K=2,
         score_repo=_stub_score_repo,
         load_ar=lambda source_ref: _FakeAR(),
     )

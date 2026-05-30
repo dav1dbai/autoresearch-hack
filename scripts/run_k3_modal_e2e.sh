@@ -43,7 +43,6 @@ export RAINDROP_WORKSHOP=1
 export AR2_OBS_CACHE=1
 export AR2_STALE_ITERS="${AR2_STALE_ITERS:-2}"
 export AR2_K="${AR2_K:-3}"
-export AR2_M="${AR2_M:-1}"
 export AR2_CACHE_DIR="$VERSIONS_ROOT"
 export RAINDROP_WORKSHOP_DB_PATH="$WORKSHOP_DB"
 export AR2_DASHBOARD_ARCHIVE="$ARCHIVE_PATH"
@@ -73,7 +72,7 @@ trap 'kill $DASH_PID 2>/dev/null || true' EXIT
 
 uv run python -m harness \
   --gpu --gpu-smoke \
-  -K "$AR2_K" -M "$AR2_M" \
+  -K "$AR2_K" \
   --budget-seconds "${AR2_BUDGET_SECONDS:-300}" \
   --archive "$ARCHIVE_PATH" \
   --traces-db "$TRACES_DB" \

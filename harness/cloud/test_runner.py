@@ -263,12 +263,11 @@ class TestResultAssembly:
             [_FakeEnv("ho-e", "heldout")],
             BUDGET,
             K=1,
-            M=2,
             score_repo=fake_score_repo,
             load_ar=lambda ref: _FakeArObj(),
             )
 
-        assert len(archive.attempts) >= 3
+        assert len(archive.attempts) >= 2
 
     def test_archive_versions_monotonic(self, tmp_path, monkeypatch):
         monkeypatch.setenv("AR2_BACKEND", "modal")
@@ -297,7 +296,6 @@ class TestResultAssembly:
             [_FakeEnv("h", "heldout")],
             BUDGET,
             K=2,
-            M=1,
             score_repo=fake_score_repo,
             load_ar=lambda ref: _FakeArObj(),
             )

@@ -155,7 +155,6 @@ def drive(
     heldout: list[Env],
     budget: Budget,
     K: int,
-    M: int,
     *,
     score_repo: Callable = _default_score_repo,
     load_ar: Callable = _default_load_ar,
@@ -164,8 +163,8 @@ def drive(
     _archive_db: Path | None = Path("obs/archive.db"),
 ) -> Archive:
     """Fixed outer loop (DESIGN §4).  Evaluate v0, then for K generations:
-    take frontier parents, call improve() M times per parent (parallel),
-    evaluate each candidate on train + heldout, archive, persist.
+    sample parents, call improve() once per parent, evaluate each candidate on
+    train + heldout, archive, persist.
 
     Selection is on held-out reward.  Held-out env CONTENTS are never passed
     to improve() — only the scalar archive rewards (DESIGN §11.3).
@@ -184,7 +183,7 @@ def drive(
     def _noop_spawn(fn, list_of_args):
         return [fn(*((a,) if not isinstance(a, tuple) else a)) for a in list_of_args]
 
-    progress(f"drive: backend={_BACKEND} K={K} M={M} budget={budget.wall_seconds}s")
+    progress(f"drive: backend={_BACKEND} K={K} budget={budget.wall_seconds}s")
     from harness.runtime.score import modal_backend_label
 
     mode = modal_backend_label()
@@ -241,14 +240,14 @@ def drive(
         else:
             os.environ.pop("AR2_WORKSHOP_TRAJECTORY", None)
 
-        # Collect all (cand_dir, parent_version) pairs — improve() per parent × M.
+        # Collect all (cand_dir, parent_version) pairs — one improve() per parent.
         def _improve_one(parent_attempt: Attempt) -> list[tuple[Path, int]]:
             candidate_dirs: list[Path] = []
             workshop_traj = os.environ.get("AR2_WORKSHOP_TRAJECTORY", "")
             if _BACKEND == "modal":
                 from harness.cloud.runner import run_improve_on_modal
 
-                progress(f"drive: improve v{parent_attempt.version} on Modal (×{M})")
+                progress(f"drive: improve v{parent_attempt.version} on Modal")
                 try:
                     from obs.events import log_event
                     log_event(
@@ -259,44 +258,42 @@ def drive(
                     )
                 except ImportError:
                     pass
-                for _ in range(M):
-                    cand_dir = run_improve_on_modal(
-                        parent_attempt.source_ref,
-                        improve_archive,
-                        budget,
-                        workshop_traj=workshop_traj,
+                cand_dir = run_improve_on_modal(
+                    parent_attempt.source_ref,
+                    improve_archive,
+                    budget,
+                    workshop_traj=workshop_traj,
+                )
+                ok, err = smoke_check_version_snapshot(cand_dir)
+                if not ok:
+                    progress(f"drive: skip broken Modal snapshot: {err}")
+                    return []
+                candidate_dirs.append(cand_dir)
+                try:
+                    from obs.events import log_event
+                    log_event(
+                        "improve_done",
+                        f"candidate snapshot → {cand_dir.name}",
+                        parent=parent_attempt.version,
+                        path=cand_dir,
                     )
-                    ok, err = smoke_check_version_snapshot(cand_dir)
-                    if not ok:
-                        progress(f"drive: skip broken Modal snapshot: {err}")
-                        continue
-                    candidate_dirs.append(cand_dir)
-                    try:
-                        from obs.events import log_event
-                        log_event(
-                            "improve_done",
-                            f"candidate snapshot → {cand_dir.name}",
-                            parent=parent_attempt.version,
-                            path=cand_dir,
-                        )
-                    except ImportError:
-                        pass
+                except ImportError:
+                    pass
             else:
                 from harness.loop.snapshot import create_version_snapshot
 
                 ar_obj = load_ar(parent_attempt.source_ref)
-                for _ in range(M):
-                    version_root = create_version_snapshot(parent_attempt.source_ref)
-                    os.environ["AR2_VERSION_ROOT"] = str(version_root)
-                    try:
-                        cand_dir = ar_obj.improve(improve_archive, budget, _noop_spawn)
-                    finally:
-                        os.environ.pop("AR2_VERSION_ROOT", None)
-                    ok, err = smoke_check_version_snapshot(cand_dir)
-                    if not ok:
-                        progress(f"drive: skip broken snapshot: {err}")
-                        continue
-                    candidate_dirs.append(cand_dir)
+                version_root = create_version_snapshot(parent_attempt.source_ref)
+                os.environ["AR2_VERSION_ROOT"] = str(version_root)
+                try:
+                    cand_dir = ar_obj.improve(improve_archive, budget, _noop_spawn)
+                finally:
+                    os.environ.pop("AR2_VERSION_ROOT", None)
+                ok, err = smoke_check_version_snapshot(cand_dir)
+                if not ok:
+                    progress(f"drive: skip broken snapshot: {err}")
+                    return []
+                candidate_dirs.append(cand_dir)
             return [(d, parent_attempt.version) for d in candidate_dirs]
 
         all_candidates: list[tuple[Path, int]] = []

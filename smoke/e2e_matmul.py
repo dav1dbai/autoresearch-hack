@@ -141,7 +141,7 @@ def run(out_dir: Path | None = None) -> None:
         MatmulEnv(split="heldout", M=96, N=96, K=96),
     ]
 
-    # --- Drive outer loop (K=1 generation, M=1 candidate) ----------------------
+    # --- Drive outer loop (K=1 generation) -------------------------------------
     from harness.loop.outer import drive
 
     ar0_dir = Path(__file__).parent.parent / "ar"
@@ -152,7 +152,6 @@ def run(out_dir: Path | None = None) -> None:
         heldout=heldout_envs,
         budget=Budget(wall_seconds=30.0),
         K=1,
-        M=1,
         score_repo=_stub_score_repo,
         load_ar=_stub_load_ar,
         _persist_path=archive_path,

@@ -258,7 +258,7 @@ class TestDrive:
     def test_v0_seeded(self, tmp_path):
         archive = drive(
             tmp_path, TRAIN_ENVS, HELDOUT_ENVS, BUDGET,
-            K=0, M=1,
+            K=0,
             score_repo=clean_score_repo,
             load_ar=make_load_ar(0.6),
         )
@@ -267,11 +267,10 @@ class TestDrive:
         assert archive.attempts[0].parent is None
 
     def test_k_generations_produces_candidates(self, tmp_path):
-        # 2 generations, 1 parent per generation (frontier(k=3) but only 1 clean),
-        # M=2 candidates per parent → at minimum v0 + 2 + 2 = 5 attempts
+        # 2 generations, one improve per selected parent.
         archive = drive(
             tmp_path, TRAIN_ENVS, HELDOUT_ENVS, BUDGET,
-            K=2, M=2,
+            K=2,
             score_repo=clean_score_repo,
             load_ar=make_load_ar(0.6),
         )
@@ -289,7 +288,7 @@ class TestDrive:
 
         archive = drive(
             tmp_path, TRAIN_ENVS, HELDOUT_ENVS, BUDGET,
-            K=1, M=1,
+            K=1,
             score_repo=mixed_score_repo,
             load_ar=make_load_ar(0.6),
         )
@@ -320,7 +319,7 @@ class TestDrive:
 
         archive = drive(
             tmp_path, TRAIN_ENVS, HELDOUT_ENVS, BUDGET,
-            K=2, M=1,
+            K=2,
             score_repo=improving_score_repo,
             load_ar=make_load_ar(0.6),
         )
@@ -333,7 +332,7 @@ class TestDrive:
         persist_path = tmp_path / "test_archive.jsonl"
         drive(
             tmp_path, TRAIN_ENVS, HELDOUT_ENVS, BUDGET,
-            K=1, M=1,
+            K=1,
             score_repo=clean_score_repo,
             load_ar=make_load_ar(0.6),
             _persist_path=persist_path,
@@ -393,7 +392,6 @@ class TestOrchestrationStub:
             heldout=heldout_envs,
             budget=Budget(wall_seconds=10.0),
             K=1,
-            M=1,
             score_repo=_score_repo,
             load_ar=_load_ar,
         )

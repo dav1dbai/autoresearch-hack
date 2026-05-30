@@ -14,7 +14,7 @@ export MUTATE_AGENT_CMD="${MUTATE_AGENT_CMD:-$(pwd)/scripts/noop_mutate.sh}"
 
 exec uv run python -m harness \
   --gpu --gpu-smoke \
-  -K 0 -M 1 \
+  -K 0 \
   --budget-seconds "${AR2_BUDGET_SECONDS:-120}" \
   --archive obs/archive.jsonl \
   "$@"
