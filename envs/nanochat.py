@@ -65,11 +65,13 @@ class NanoChatEnv(BaseEnv):
         split: Split = "train",
         stub: bool | None = None,
         baseline_bpb: float = _BASELINE_BPB,
+        data_seed: int = 0,
     ) -> None:
         self.id = f"nanochat-{split}"
         self.split = split
         self._stub = _STUB_MODE if stub is None else stub
         self._baseline_bpb = baseline_bpb
+        self._data_seed = data_seed
         self._workdir: Path | None = None
 
     # ------------------------------------------------------------------
@@ -111,18 +113,35 @@ class NanoChatEnv(BaseEnv):
 
     def _run(self, workdir: Path) -> float:
         if self._stub:
-            return float(os.environ.get("NANOCHAT_STUB_BPB", str(_STUB_BPB_DEFAULT)))
+            base = float(os.environ.get("NANOCHAT_STUB_BPB", str(_STUB_BPB_DEFAULT)))
+            return base + self._data_seed * 0.05
 
         log_path = workdir / "run.log"
-        result = subprocess.run(
+        subprocess.run(
             [sys.executable, str(workdir / "train.py")],
             cwd=str(workdir),
             stdout=log_path.open("w"),
             stderr=subprocess.STDOUT,
-            timeout=600,  # hard wall; real budget is enforced inside train.py (TIME_BUDGET=300)
+            timeout=600,
         )
-        log_text = log_path.read_text()
-        return _parse_bpb(log_text)
+        metrics_path = workdir / ".ar2_metrics.json"
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "envs.nanochat_eval",
+                "--workdir",
+                str(workdir),
+                "--out",
+                str(metrics_path),
+            ],
+            check=True,
+            capture_output=True,
+            timeout=120,
+        )
+        import json
+
+        return float(json.loads(metrics_path.read_text())["val_bpb"])
 
 
 def _parse_bpb(log: str) -> float:

@@ -16,7 +16,7 @@ We climb the axis above it. Treat the **entire autoresearch repo as the artifact
 - **Outer axis (what we optimize):** held-out final reward `R*` vs **version** `N`.
 - **Second derivative:** we want each version's *inner curve to lift* — `∂²R / ∂N∂t > 0`.
 
-This is the **Darwin Gödel Machine** shape (empirically-validated self-code-modification + evolutionary archive), grounded on `karpathy/autoresearch` as v0 and Alex's verifiable envs as the referees.
+This follows a **nested autoresearch / version archive** pattern: each generation edits a snapshot of the research stack, scored on held-out envs — grounded on `karpathy/autoresearch` as v0 and Alex's verifiable envs as the referees.
 
 ---
 
@@ -24,11 +24,12 @@ This is the **Darwin Gödel Machine** shape (empirically-validated self-code-mod
 
 > **The referee lives outside the mutable repo, and obs is injected by the harness — neither is reachable by the agent.**
 
-If the agent owns the whole repo, it must **not** own the grader or the telemetry. Otherwise step 1 of reward hacking is *"delete the grader / silence the logs"* — which is literally what DGM did (it removed its own hallucination detector). So:
+If the agent owns the whole repo, it must **not** own the grader or the telemetry. Otherwise step 1 of reward hacking is *"delete the grader / silence the logs"* — a failure mode seen in open-ended self-modification systems. So (see `DECISIONS.md` D-15 for the precise split):
 
-- `ar/` (mutable) contains the research **policy** and the self-improvement **policy**. The agent rewrites this freely.
-- `harness/` (immutable) contains the **outer-loop driver, the selection rule, the sandbox runner, the referee invocation, the hack detector, and obs injection**. The agent never edits this.
-- `envs/` (immutable to AR) contains the **Envs / evaluators**. Alex owns these.
+- `ar/` (mutable) contains the research **policy** and the self-improvement **policy**. Copied into each `versions/v_*/` snapshot for meta-editing.
+- `harness/runtime/` (mutable in snapshots) contains rollout orchestration (`score_repo`, sandbox wiring). Host copy is the default; eval reload from snapshot is D-15b.
+- `harness/loop/`, `harness/cloud/`, `harness/backends/`, `harness/tracing/`, `harness/contracts.py` (host-only) contain the **outer driver, selection rule, referee invocation boundary, hack detector, and obs injection**. The meta-agent never edits these on the host.
+- `envs/` (fixed relative to AR) contains the **Envs / evaluators**. Alex owns these.
 
 The agent can improve *how it improves itself*. It cannot touch *how it is graded or watched.* That gap is the entire experiment: reward hacking is forced into the *interesting* forms (overfit, fabricated internal logs, env-quirk exploitation), all caught by the held-out gap + Raindrop traces.
 
@@ -75,7 +76,7 @@ class Rollout(BaseModel):
     trace_id: str                      # Raindrop tag
     hack_flags: list[str] = []
 
-class Attempt(BaseModel):              # one node in the evolutionary archive
+class Attempt(BaseModel):              # one node in the version archive
     version: int
     parent: int | None
     diff_summary: str
@@ -89,7 +90,7 @@ class Attempt(BaseModel):              # one node in the evolutionary archive
 class Archive(BaseModel):
     attempts: list[Attempt] = []
     def best(self) -> Attempt | None: ...
-    def frontier(self) -> list[Attempt]: ...   # ancestors worth branching from (DGM tree)
+    def frontier(self) -> list[Attempt]: ...   # top-k parents by heldout (greedy until D-02)
 
 @runtime_checkable
 class Env(Protocol):
@@ -156,7 +157,7 @@ def drive(ar0: Path, train, heldout, budget, K: int, M: int) -> Archive:   # the
 
 **Inner loop** (inside `ar/solve`, evolvable — v0 = Karpathy's): `edit workdir → score() → keep/discard → repeat until budget`. Produces the inner curve + best Submission. Later versions may fan this out (M parallel experiments via `spawn`, a critic agent, smarter search).
 
-**Outer loop** (`harness/drive`, fixed): `evaluate(v0) → for each generation: improve() the frontier in parallel → evaluate candidates on train+held-out → archive → record curve`. Selection is on **held-out**. Output = the evolutionary archive + the **outer curve** (best held-out reward vs version), two-colored by hack flags.
+**Outer loop** (`harness/drive`, fixed): `evaluate(v0) → for each generation: improve() the frontier in parallel → evaluate candidates on train+held-out → archive → record curve`. Selection is on **held-out**. Output = the version archive + the **outer curve** (best held-out reward vs version), two-colored by hack flags.
 
 ---
 
@@ -172,7 +173,7 @@ def drive(ar0: Path, train, heldout, budget, K: int, M: int) -> Archive:   # the
 | 6 | **Orchestrator** | plain Python, **not an LLM** | local | envs, budget, archive | drives `drive()`, fans scoring out to Modal |
 
 Notes:
-- **Agents 2 and 3 are the only things that evolve.** Their *behavior* is whatever the current `ar/` defines. v0: agent 3 = one Karpathy-style loop; agent 2 = a single coding-agent edit. The interesting result is the meta-agent *adding agents* (fanout) to agent 3 over versions.
+- **Agents 2 and 3 are the only things that evolve.** Their *behavior* is whatever the current `ar/` defines. v0: agent 3 = one inner research loop (Karpathy autoresearch shape); agent 2 = a single coding-agent edit. The interesting result is the meta-agent *adding agents* (fanout) to agent 3 over versions.
 - **Agents 4, 5, 6 are deterministic and immutable.** No LLM judges anywhere in the reward path — integrity.
 - Agent 1 is David's example ("one agent sets up the base container with Raindrop"): it owns reproducible images so every other agent runs identically.
 
@@ -182,7 +183,7 @@ Notes:
 
 **Inner obs — Raindrop Workshop (`harness/telemetry.py`).** Every LLM/tool call by agents 2 & 3 is captured. We do **not** rely on each agent self-instrumenting — the harness injects, at the sandbox boundary, `OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL` pointing at a **logging proxy**, plus `config_id` tags `{version, candidate, env_id, split}`. The proxy mirrors spans to Workshop's local `.db` (`~/.raindrop/raindrop_workshop.db`, UI :5899) and records tokens/latency; we compute cost = tokens × price. Because injection is at the sandbox env level, **AR can't disable its own telemetry** (another integrity edge).
 
-**Outer obs — the meta dashboard (`obs/`).** The `Archive` (every `{version, parent, diff, train_reward, heldout_reward, hack_flags, cost, trace_id}`) plus: the **outer curve** (held-out reward vs version, two-colored), the **lineage tree** (DGM evolutionary tree), and cost-per-version. This is *our* science view.
+**Outer obs — the meta dashboard (`obs/`).** The `Archive` (every `{version, parent, diff, train_reward, heldout_reward, hack_flags, cost, trace_id}`) plus: the **outer curve** (held-out reward vs version, two-colored), the **lineage tree** (parent → child), and cost-per-version. This is *our* science view.
 
 **The bridge — hack detector.** Reads Raindrop spans (SQL over tool-call data: writes to evaluator/test paths, fabricated "passing" logs, suspiciously short trajectories, env-quirk exploits) **and** the `train_reward − heldout_reward` gap. A version whose train reward spikes but held-out doesn't = overfit/hack → red on the curve.
 
@@ -221,15 +222,15 @@ autoresearch-meta/                 # our deliverable repo
 │   ├── entrypoint.py              #   solve() + improve()  (the only harness-facing contract)
 │   ├── program.md                 #   still here; now the WHOLE folder is fair game
 │   └── ...                        #   inner-loop code, search, (later) fanout
-├── harness/                       # ☒ IMMUTABLE — ours; the agent never edits this
-│   ├── contracts.py               #   §3 — single source of truth
-│   ├── score_repo.py              #   run an ar/ as a black box on envs, in a sandbox
-│   ├── outer_loop.py              #   drive() + evaluate() + selection rule
-│   ├── referee.py                 #   isolated out-of-process Env.score runner
-│   ├── sandbox.py                 #   Modal sandbox wrappers (gVisor, caps, spawn primitive)
-│   ├── telemetry.py               #   Raindrop proxy + tag injection + cost
-│   ├── hack_detector.py           #   spans SQL + train/heldout gap -> hack_flags
-│   └── archive.py                 #   evolutionary tree store (sqlite/jsonl)
+├── harness/                       # host-only + snapshot-mutable runtime (D-15)
+│   ├── contracts.py               #   §3 — single source of truth (host-only)
+│   ├── loop/                      #   drive(), evaluate(), archive (host-only)
+│   ├── runtime/                   #   score_repo, rollout, sandbox — copied into versions/v_*/
+│   ├── cloud/                     #   Modal fan-out (host-only)
+│   ├── backends/                  #   GPU runners (host-only)
+│   ├── tracing/                   #   Raindrop proxy + sync (host-only)
+│   └── util/                      #   shared helpers
+├── versions/                      # gitignored snapshots (v_*/ar/, v_*/harness/runtime/)
 ├── envs/                          # ☒ IMMUTABLE to AR — Alex
 │   ├── base.py                    #   Env protocol + nanochat reference adapter
 │   ├── legal/  ...                #   Alex's legal env

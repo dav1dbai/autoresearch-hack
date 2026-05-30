@@ -1,9 +1,9 @@
-"""AR² contracts — the single source of truth. IMMUTABLE.
+"""AR² contracts — single source of truth for types and protocols (host-only).
 
-Everything in harness/ and envs/ imports these. The mutable ar/ folder implements
-the two entrypoint callables (Solve, Improve). The referee, selection rule,
-sandboxing, obs injection, and hack detection all live in harness/ and are never
-reachable from ar/.  See proof/DESIGN.md §3.
+The mutable stack (`ar/` + snapshot `harness/runtime/`) implements Solve and Improve.
+Selection, sandbox boundaries, obs injection, hack detection, and the outer driver
+live in other harness subpackages and are not editable inside a version snapshot.
+See proof/DESIGN.md §3 and proof/DECISIONS.md D-15.
 """
 from __future__ import annotations
 
@@ -20,7 +20,12 @@ class Budget(BaseModel):
     wall_seconds: float = 300.0
     usd: float | None = None
     tokens: int | None = None
-    max_concurrency: int = 1  # cap on agent-spawned fanout; ENFORCED by the harness, not the agent
+
+
+class EvalProtocol(BaseModel):
+    """Harness eval rigor — separate from agent Budget (D-08)."""
+    inner_max_iters: int = 8
+    seeds: int = 1
 
 
 class TaskSpec(BaseModel):
@@ -59,7 +64,7 @@ class Rollout(BaseModel):
 
 
 class Attempt(BaseModel):
-    """One node in the evolutionary archive (a single AR version's evaluation)."""
+    """One node in the version archive (one evaluated AR snapshot)."""
     version: int
     parent: int | None = None
     diff_summary: str = ""
@@ -86,10 +91,48 @@ class Archive(BaseModel):
         return max(pool, key=lambda a: a.heldout_reward, default=None)
 
     def frontier(self, k: int = 3) -> list[Attempt]:
-        """DGM-style: branch from the top-k non-hacked ancestors by held-out reward."""
+        """Top-k non-hacked attempts by held-out reward (greedy legacy)."""
         ranked = sorted((a for a in self.attempts if not a.hack_flags),
                         key=lambda a: a.heldout_reward, reverse=True)
         return ranked[:k] or self.attempts[-k:]
+
+    def sample_parents(self, m: int, *, seed: int | None = None) -> list[Attempt]:
+        """D-02: weighted sample of non-hacked parents (not greedy top-k)."""
+        import random
+
+        rng = random.Random(seed)
+        clean = [a for a in self.attempts if not a.hack_flags]
+        pool = clean or list(self.attempts)
+        if not pool:
+            return []
+        if len(pool) <= m:
+            return pool
+
+        child_counts: dict[int, int] = {}
+        for a in self.attempts:
+            if a.parent is not None:
+                child_counts[a.parent] = child_counts.get(a.parent, 0) + 1
+
+        weights = [
+            max(a.heldout_reward, 1e-6) / (1 + child_counts.get(a.version, 0))
+            for a in pool
+        ]
+        total = sum(weights)
+        probs = [w / total for w in weights]
+
+        chosen: list[Attempt] = []
+        remaining = list(pool)
+        remaining_weights = list(probs)
+        for _ in range(min(m, len(remaining))):
+            pick = rng.choices(remaining, weights=remaining_weights, k=1)[0]
+            chosen.append(pick)
+            idx = remaining.index(pick)
+            remaining.pop(idx)
+            remaining_weights.pop(idx)
+            if remaining_weights:
+                s = sum(remaining_weights)
+                remaining_weights = [w / s for w in remaining_weights]
+        return chosen
 
 
 @runtime_checkable

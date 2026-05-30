@@ -262,6 +262,11 @@ class TestSolveBudget:
 # ---------------------------------------------------------------------------
 
 class TestImprove:
+    @pytest.fixture(autouse=True)
+    def _repo_root(self, monkeypatch):
+        repo = Path(__file__).resolve().parent.parent
+        monkeypatch.setenv("AR2_REPO_ROOT", str(repo))
+
     def test_returns_new_directory(self, tmp_path: Path):
         """improve() creates a NEW directory, not the same as ar/."""
         import ar.entrypoint as ep
@@ -280,7 +285,8 @@ class TestImprove:
             ar_dir = Path(ep.__file__).parent
             assert result != ar_dir
             assert result.exists()
-            assert result.is_dir()
+            assert (result / "ar" / "entrypoint.py").exists()
+            assert (result / "harness" / "runtime" / "score.py").exists()
         finally:
             shutil.rmtree(result, ignore_errors=True)
 
@@ -296,8 +302,7 @@ class TestImprove:
 
         try:
             ar_dir = Path(ep.__file__).parent
-            # entrypoint.py should exist in the copy
-            assert (result / "entrypoint.py").exists()
+            assert (result / "ar" / "entrypoint.py").exists()
         finally:
             shutil.rmtree(result, ignore_errors=True)
 
@@ -342,14 +347,27 @@ class TestImprove:
 
         assert len(captured) == 1
         prompt = captured[0]
-        assert "v1" in prompt
-        assert "train=0.7000" in prompt
-        assert "heldout=0.6500" in prompt
-        assert "v2" in prompt
-        assert "HACKED" in prompt
-        assert "overfit" in prompt
-        # best is v1 (not hacked, higher heldout)
-        assert "Best so far" in prompt
+        assert "Attempts so far: 2" in prompt
+        assert "Latest version: v2" in prompt
+        assert "Best known version: v1 heldout=0.6500" in prompt
+        assert "raindrop.query_traces" in prompt
+        assert "raindrop.get_run_outline" in prompt
+        assert "raindrop.search_run" in prompt
+        assert "train=0.7000" not in prompt
+        assert "HACKED" not in prompt
+
+    def test_improve_prompt_scopes_workshop_to_run_id(self, monkeypatch):
+        """When AR2_RUN_ID is set, improve prompt requires same-run Workshop evidence."""
+        import ar.entrypoint as ep
+
+        monkeypatch.setenv("AR2_RUN_ID", "raindrop-k2")
+        prompt = ep._build_improve_prompt(Archive(), Path("/tmp/version-root"))
+
+        assert "Current AR2_RUN_ID: `raindrop-k2`" in prompt
+        assert "metadata or OTLP attributes contain this" in prompt
+        assert "`runId` or `ar2.run_id`" in prompt
+        assert "Ignore traces from other run ids" in prompt
+        assert "identify which same-run traces you inspected" in prompt
 
     def test_empty_archive_no_crash(self):
         """improve() with no prior attempts completes without error."""

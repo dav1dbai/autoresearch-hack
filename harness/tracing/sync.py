@@ -1,14 +1,16 @@
 """harness/tracing/sync.py — AR² span/attempt sync + Raindrop Workshop UI push.
 
 Pull model: Modal/local rollouts return trace.jsonl → merge into obs/ar2_workshop.db
-(AR² SQL SOT for improve() read path) + OTLP push to Raindrop Workshop (:5899 UI).
-Never write AR² custom tables into ~/.raindrop/raindrop_workshop.db — that breaks
-Raindrop's migrations and leaves the UI empty.
+(AR² SQL SOT for improve() read path).
+
+Workshop UI (:5899) is for **real Codex traces** via raindrop workshop mcp only.
+Harness OTLP push is OFF by default — it created empty runs ("Waiting for events").
 
 Env:
-  RAINDROP_WORKSHOP=1          — OTLP push + AR² SQL sync (default on)
+  RAINDROP_WORKSHOP=1          — SQL sync to obs/ar2_workshop.db (default on)
+  RAINDROP_WORKSHOP_UI_PUSH=1    — also push synthetic score spans to Workshop UI (off)
   RAINDROP_WORKSHOP_DB_PATH    — AR² SQL path (default obs/ar2_workshop.db)
-  RAINDROP_WORKSHOP_URL        — Workshop OTLP endpoint (default :5899)
+  RAINDROP_WORKSHOP_URL        — Workshop endpoint for Codex MCP (tunnel URL on Modal)
   AR2_OBS_CACHE=1              — also mirror spans/attempts to obs/traces.db + obs/archive.db
 """
 from __future__ import annotations
@@ -124,6 +126,11 @@ def workshop_enabled() -> bool:
     return os.environ.get("RAINDROP_WORKSHOP", "1") == "1"
 
 
+def workshop_ui_push_enabled() -> bool:
+    """Synthetic harness OTLP → Workshop UI. Off by default (creates empty runs)."""
+    return os.environ.get("RAINDROP_WORKSHOP_UI_PUSH", "0") == "1"
+
+
 _AR2_WORKSHOP_DB = Path("obs/ar2_workshop.db")
 
 
@@ -146,6 +153,16 @@ def workshop_url() -> str:
 
 def obs_cache_enabled() -> bool:
     return os.environ.get("AR2_OBS_CACHE", "0") == "1"
+
+
+def _ar2_run_id() -> str:
+    return os.environ.get("AR2_RUN_ID", "").strip()
+
+
+def _prefix_run_name(name: str, run_id: str) -> str:
+    if not run_id or name.startswith(f"[{run_id}]"):
+        return name
+    return f"[{run_id}] {name}"
 
 
 def _open(path: Path) -> sqlite3.Connection:
@@ -418,11 +435,57 @@ def _otlp_trace_id(trace_id: str) -> str:
     return hex_id.ljust(32, "0")
 
 
+def _span_display_name(span: dict[str, Any]) -> str:
+    """Human-readable OTLP span name for Raindrop run list (not bare 'score')."""
+    tool = span.get("tool_name") or "span"
+    ver = int(span.get("version") or 0)
+    env_id = str(span.get("env_id") or "")
+    split = str(span.get("split") or "")
+    if tool == "evaluate":
+        summary = str(span.get("tool_input") or "")[:60]
+        return f"v{ver} evaluate {summary}".strip()
+    if tool == "improve":
+        return f"v{ver} improve"
+    if tool == "score" and env_id:
+        return f"v{ver} {split} {env_id}"
+    if tool in ("agent", "llm") or span.get("model"):
+        model = str(span.get("model") or "agent")
+        return f"v{ver} {split} {model}".strip()
+    return f"v{ver} {tool}"
+
+
+def push_attempt_live(attempt: Attempt) -> int:
+    """Push one root span per Attempt so Raindrop lists vN evaluate, not anonymous score."""
+    if not workshop_enabled():
+        return 0
+    trace_id = (attempt.trace_id or "").split(",")[0].strip() or uuid_hex(attempt.version)
+    summary = (
+        f"train={attempt.train_reward:.3f} heldout={attempt.heldout_reward:.3f}"
+    )
+    if attempt.diff_summary:
+        summary = f"{summary} · {attempt.diff_summary[:48]}"
+    return push_spans_live([{
+        "trace_id": trace_id,
+        "version": attempt.version,
+        "candidate": attempt.source_ref,
+        "env_id": "",
+        "split": "",
+        "model": "",
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "latency_ms": attempt.cost.wall_seconds * 1000.0,
+        "tool_name": "evaluate",
+        "tool_input": summary,
+        "ts": time.time(),
+    }])
+
+
 def push_spans_live(spans: list[dict[str, Any]]) -> int:
     """OTLP JSON push to Raindrop Workshop UI. Returns spans ingested (best-effort)."""
     if not workshop_enabled() or not spans:
         return 0
 
+    run_id = _ar2_run_id()
     otlp_spans: list[dict[str, Any]] = []
     for i, span in enumerate(spans):
         ts_ms = float(span.get("ts") or time.time()) * 1000.0
@@ -430,21 +493,27 @@ def push_spans_live(spans: list[dict[str, Any]]) -> int:
         ts_ns = int(ts_ms * 1e6)
         tool = span.get("tool_name") or "score"
         model = str(span.get("model") or "")
+        display = _prefix_run_name(_span_display_name(span), run_id)
+        attributes = [
+            {"key": "model", "value": {"stringValue": model}},
+            {"key": "env_id", "value": {"stringValue": str(span.get("env_id") or "")}},
+            {"key": "split", "value": {"stringValue": str(span.get("split") or "")}},
+            {"key": "ar2.version", "value": {"intValue": str(span.get("version") or 0)}},
+            {"key": "ar2.candidate", "value": {"stringValue": str(span.get("candidate") or "")[:200]}},
+            {"key": "ar2.tool_input", "value": {"stringValue": str(span.get("tool_input") or "")[:500]}},
+            {"key": "ar2.tool", "value": {"stringValue": str(tool)}},
+            {"key": "ar2.display_name", "value": {"stringValue": display}},
+        ]
+        if run_id:
+            attributes.append({"key": "ar2.run_id", "value": {"stringValue": run_id}})
         otlp_spans.append({
             "traceId": _otlp_trace_id(str(span.get("trace_id") or uuid_hex(i))),
             "spanId": f"{i + 1:016x}",
-            "name": tool if tool != "agent" else (model or "llm"),
+            "name": display,
             "kind": 1,
             "startTimeUnixNano": str(ts_ns),
             "endTimeUnixNano": str(ts_ns + int(latency_ms * 1e6)),
-            "attributes": [
-                {"key": "model", "value": {"stringValue": model}},
-                {"key": "env_id", "value": {"stringValue": str(span.get("env_id") or "")}},
-                {"key": "split", "value": {"stringValue": str(span.get("split") or "")}},
-                {"key": "ar2.version", "value": {"intValue": str(span.get("version") or 0)}},
-                {"key": "ar2.candidate", "value": {"stringValue": str(span.get("candidate") or "")[:200]}},
-                {"key": "ar2.tool_input", "value": {"stringValue": str(span.get("tool_input") or "")[:500]}},
-            ],
+            "attributes": attributes,
         })
 
     payload = json.dumps({
@@ -538,9 +607,10 @@ def sync_all(
 
     if workshop:
         ensure_raindrop_db()
+        ui_push = live_push and workshop_ui_push_enabled()
         if trace_files:
             result["spans_inserted"] = sync_spans(trace_files)
-            if live_push:
+            if ui_push:
                 pushed = 0
                 for tf in trace_files:
                     pushed += push_spans_live(parse_trace_file(tf))
@@ -548,6 +618,8 @@ def sync_all(
         if attempt is not None:
             sync_attempt(attempt)
             result["attempts_synced"] = 1
+            if ui_push:
+                result["otlp_pushed"] = result.get("otlp_pushed", 0) + push_attempt_live(attempt)
         elif archive_jsonl is not None and archive_jsonl.exists():
             result["attempts_synced"] = sync_archive_jsonl(archive_jsonl)
 

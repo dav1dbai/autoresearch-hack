@@ -1,6 +1,6 @@
 # AR² — autoresearch on autoresearch
 
-Evolve the **whole** autoresearch repo (DGM-style), scored on **held-out** verifiable envs.
+Evolve the **whole** autoresearch stack across **versions**, scored on **held-out** verifiable envs.
 The second derivative: optimize how much better each AR *version* is at gaining reward.
 
 **Read [`proof/DESIGN.md`](proof/DESIGN.md) for architecture.**
@@ -16,7 +16,7 @@ See [`proof/README.md`](proof/README.md) for the full doc index.
 | Zone | Paths |
 |------|--------|
 | **Mutable** (meta-agent each generation) | `ar/`, `harness/runtime/` → `versions/v_*/` |
-| **Integrity kernel** (host CLI only) | `envs/`, `contracts`, `tracing/`, `loop/outer`, `cloud/`, `backends/`, `infra/` |
+| **Host-only** | `envs/`, `harness/contracts.py`, `harness/tracing/`, `harness/loop/`, `harness/cloud/`, `harness/backends/`, `infra/` |
 
 - `ar/` — `solve` + `improve` policy
 - `harness/` — host driver + `runtime/` (snapshot copy is meta-editable)

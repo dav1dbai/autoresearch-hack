@@ -47,7 +47,8 @@ base_image = (
     .apt_install("git", "curl", "nodejs", "npm")
     .run_commands(
         "npm install -g @openai/codex @anthropic-ai/claude-code",
-        "pip install raindrop-ai || true",  # best-effort; not on PyPI yet
+        "curl -fsSL https://raindrop.sh/install | RAINDROP_QUIET=1 bash",
+        "ln -sf /root/.raindrop/bin/raindrop /usr/local/bin/raindrop",
     )
     .pip_install("pydantic", "httpx", "python-dotenv", "numpy", "modal")
 )
@@ -94,4 +95,13 @@ vast_scorer_image = (
 # kept as a distinct name so harness code can reference it explicitly
 # without importing nanochat_gpu_image's heavier layers.
 # ---------------------------------------------------------------------------
-sandbox_image = base_image.add_local_python_source("harness", "envs", "infra")
+sandbox_image = (
+    base_image
+    .add_local_dir("scripts", remote_path="/root/scripts", copy=True)
+    .run_commands("chmod +x /root/scripts/raindrop_codex_exec.sh")
+    # add_local_python_source bakes .py only; the cuda-oxide env reads .rs kernel
+    # files at reset() time, so bake the kernels dir explicitly or in-container
+    # reset() crashes with FileNotFoundError.
+    .add_local_dir("envs/cuda_oxide/kernels", remote_path="/root/envs/cuda_oxide/kernels", copy=True)
+    .add_local_python_source("harness", "envs", "infra")
+)

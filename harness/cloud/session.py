@@ -131,6 +131,20 @@ def invoke_run_evaluate(
         return run_evaluate_fn.remote(payload)
 
 
+def invoke_run_improve(
+    app: modal.App,
+    run_improve_fn: Any,
+    payload: dict,
+) -> dict:
+    """Dispatch run_improve.remote via deployed app or ephemeral app.run()."""
+    if deployed_enabled():
+        ensure_app_deployed(app)
+        fn = modal.Function.from_name(APP_NAME, "run_improve")
+        return fn.remote(payload)
+    with ephemeral_run(app):
+        return run_improve_fn.remote(payload)
+
+
 def deploy_app(app: modal.App) -> None:
     """Deploy the ar2 app persistently (modal deploy equivalent)."""
     from infra.modal.images import assert_hackathon_profile

@@ -87,3 +87,11 @@ def gpu_matmul_pools(
         )
     ]
     return train, heldout
+
+
+def cuda_oxide_pools(kernels: list[str] | None = None) -> tuple[list[Env], list[Env]]:
+    """cuda-oxide Rust→PTX kernel envs (gemm, reduction, ...), scored on the deployed
+    ar2-cudaoxide H100 app. Inner agent edits kernel.rs; reward = throughput/target.
+    Lazy import keeps the cuda_oxide env (and modal) off the default matmul import path."""
+    from envs.cuda_oxide import cuda_oxide_pools as _pools
+    return _pools(kernels)

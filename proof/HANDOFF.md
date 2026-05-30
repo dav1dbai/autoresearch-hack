@@ -3,7 +3,7 @@
 Digest of session work. Read `DESIGN.md` (architecture), `DECISIONS.md` (work queue) in this folder.
 
 ## TL;DR
-AR² = **autoresearch on autoresearch** (DGM-style). Inner loop = agent edits a solution to raise verifiable reward; outer loop = mutate the *whole AR repo* across versions; the science claim is the **second derivative** (`∂²R/∂N∂t`).
+AR² = **autoresearch on autoresearch**. Inner loop = agent edits a solution to raise verifiable reward; outer loop = mutate the research stack across versions; the science claim is the **second derivative** (`∂²R/∂N∂t`).
 
 **Status (2026-05-30 ~13:30):**
 - **166 offline tests green** (`uv run pytest -q`)

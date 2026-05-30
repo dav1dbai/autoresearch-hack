@@ -20,10 +20,8 @@ Function:   run_evaluate(payload) -> dict
             One Attempt — fans out train envs, then heldout envs, each via run_rollout.
             Groups all rollouts for a version in the Modal call graph (easier triage).
 
-Fan-out:    run_rollouts_parallel() builds (snapshot_ref, env_spec, budget_dict) tuples
-            for every env and calls run_rollout.starmap(inputs), which Modal fans out
-            across up to max_containers=_MAX_CONTAINERS containers.  The per-container
-            inner SpawnFn cap is budget.max_concurrency.
+    Fan-out:    run_rollouts_parallel() builds tuples per env; inner spawn cap is
+                harness-internal (_SPAWN_FANOUT_CAP in sandbox.py) if ar/ uses spawn().
 
 Backend switch
 ──────────────
@@ -49,7 +47,7 @@ from typing import Any
 
 import modal
 
-from harness.contracts import Budget, Rollout
+from harness.contracts import Archive, Budget, Rollout
 
 # ── Volume for dynamic candidate snapshots ───────────────────────────────────
 
@@ -121,6 +119,7 @@ def run_rollout(
                 os.environ[key] = val
         os.environ.setdefault("AR2_TRACE_ID", trace_id)
 
+        _ensure_raindrop_codex_env()
         _codex_login()
         env = _load_env(env_spec)
         snap_dir = Path(SNAPSHOT_MOUNT) / snapshot_ref
@@ -254,18 +253,6 @@ def _load_env(env_spec: dict) -> Any:
     return env
 
 
-def _load_solve(snap_dir: Path):
-    ep = snap_dir / "entrypoint.py"
-    spec = importlib.util.spec_from_file_location(
-        f"ar._snap_{abs(hash(str(snap_dir)))}", ep
-    )
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot load ar entrypoint from {ep}")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # type: ignore[attr-defined]
-    return mod.solve
-
-
 def _codex_login() -> None:
     """Register OPENAI_API_KEY with codex (writes auth.json) so `codex exec` sends a
     Bearer token. Codex ignores the bare env var for its responses transport unless
@@ -280,6 +267,98 @@ def _codex_login() -> None:
                        text=True, capture_output=True, timeout=60)
     except Exception:
         pass
+
+
+def _ensure_raindrop_codex_env() -> None:
+    """Wire INNER/MUTATE agent cmds through Raindrop MCP (overrides bare codex exec in .env)."""
+    import os
+    from pathlib import Path
+
+    import harness
+
+    repo_root = Path(harness.__file__).resolve().parent.parent
+    os.environ["AR2_REPO_ROOT"] = str(repo_root)
+    os.environ["AR2_MODAL"] = "1"
+    os.environ.setdefault("RAINDROP_BIN", "/root/.raindrop/bin/raindrop")
+    workshop = os.environ.get("RAINDROP_WORKSHOP_URL", "http://127.0.0.1:5899").rstrip("/")
+    os.environ.setdefault("RAINDROP_WORKSHOP_URL", workshop)
+    os.environ.setdefault("RAINDROP_LOCAL_DEBUGGER", f"{workshop}/v1/")
+
+    if os.environ.get("RAINDROP_WORKSHOP", "1") != "1":
+        return
+
+    wrapper = repo_root / "scripts" / "raindrop_codex_exec.sh"
+    if not wrapper.is_file():
+        return
+
+    extra = os.environ.get(
+        "AR2_CODEX_EXTRA_FLAGS",
+        "-m gpt-5-codex -c preferred_auth_method=apikey",
+    ).strip()
+    cmd = f"{wrapper} exec {extra}".strip()
+    os.environ["INNER_AGENT_CMD"] = cmd
+    os.environ["MUTATE_AGENT_CMD"] = cmd
+
+
+@app.function(
+    image=sandbox_image,
+    timeout=600,
+    max_containers=8,
+    secrets=[
+        modal.Secret.from_dotenv(),
+        modal.Secret.from_name("autoresearch-openai"),
+    ],
+    volumes={SNAPSHOT_MOUNT: modal.Volume.from_name(SNAPSHOT_VOLUME_NAME, create_if_missing=True)},
+)
+def run_improve(payload: dict) -> dict:
+    """Meta improve() in a Modal container — returns volume ref for new version snapshot."""
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from harness.contracts import Archive, Budget
+
+    _snapshot_volume().reload()
+    _ensure_raindrop_codex_env()
+    _codex_login()
+
+    parent_ar = Path(SNAPSHOT_MOUNT) / payload["parent_ar_ref"]
+    archive = Archive.model_validate(payload["archive"])
+    budget = Budget.model_validate(payload["budget"])
+    traj = payload.get("workshop_traj") or ""
+    if traj:
+        os.environ["AR2_WORKSHOP_TRAJECTORY"] = str(traj)
+    else:
+        os.environ.pop("AR2_WORKSHOP_TRAJECTORY", None)
+    run_id = str(payload.get("run_id") or "").strip()
+    if run_id:
+        os.environ["AR2_RUN_ID"] = run_id
+    else:
+        os.environ.pop("AR2_RUN_ID", None)
+
+    cache = Path("/tmp/ar2_cache")
+    cache.mkdir(parents=True, exist_ok=True)
+    os.environ["AR2_CACHE_DIR"] = str(cache)
+    import harness
+
+    os.environ["AR2_REPO_ROOT"] = str(Path(harness.__file__).resolve().parent.parent)
+
+    from harness.runtime.loader import load_ar
+
+    mod = load_ar(str(parent_ar))
+
+    def _noop_spawn(fn, list_of_args):
+        return [fn(*((a,) if not isinstance(a, tuple) else a)) for a in list_of_args]
+
+    version_root = Path(mod.improve(archive, budget, _noop_spawn))
+    import base64
+    import io
+    import tarfile
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        tar.add(version_root, arcname=".")
+    return {"tar_b64": base64.b64encode(buf.getvalue()).decode("ascii")}
 
 
 # ── Volume snapshot upload ────────────────────────────────────────────────────
@@ -299,6 +378,64 @@ def upload_snapshot(ar_dir: Path) -> str:
         batch.put_directory(str(ar_dir), dest_in_vol)
 
     return snap_ref
+
+
+def upload_version_snapshot(version_root: Path) -> str:
+    """Upload full version snapshot (ar/ + harness/runtime/) into the Volume."""
+    vol = _snapshot_volume()
+    snap_ref = f"snap_{uuid.uuid4().hex}"
+    dest = f"/{snap_ref}"
+    with vol.batch_upload(force=True) as batch:
+        batch.put_directory(str(version_root / "ar"), f"{dest}/ar")
+        runtime = version_root / "harness" / "runtime"
+        if runtime.is_dir():
+            batch.put_directory(str(runtime), f"{dest}/harness/runtime")
+    return snap_ref
+
+
+def _extract_version_tar(tar_b64: str, dest: Path) -> Path:
+    """Unpack run_improve tarball into a local version snapshot root."""
+    import base64
+    import io
+    import tarfile
+
+    dest.mkdir(parents=True, exist_ok=True)
+    data = base64.b64decode(tar_b64)
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
+        tar.extractall(dest, filter="data")
+    return dest
+
+
+def run_improve_on_modal(
+    parent_source_ref: str,
+    archive: Archive,
+    budget: Budget,
+    workshop_traj: str = "",
+) -> Path:
+    """Host entry: run improve() on Modal, download version snapshot locally."""
+    import os
+    import tempfile
+
+    from infra.modal.images import assert_hackathon_profile
+    from harness.runtime.loader import resolve_ar_dir
+
+    assert_hackathon_profile()
+    parent_ar = resolve_ar_dir(parent_source_ref)
+    parent_ref = upload_snapshot(parent_ar)
+    payload = {
+        "parent_ar_ref": parent_ref,
+        "archive": archive.model_dump(),
+        "workshop_traj": workshop_traj,
+        "budget": budget.model_dump(),
+        "run_id": os.environ.get("AR2_RUN_ID", ""),
+    }
+    from harness.cloud.session import invoke_run_improve
+
+    raw = invoke_run_improve(app, run_improve, payload)
+    cache = Path(os.environ.get("AR2_CACHE_DIR", "versions"))
+    cache.mkdir(parents=True, exist_ok=True)
+    local_root = Path(tempfile.mkdtemp(prefix="v_", dir=cache))
+    return _extract_version_tar(raw["tar_b64"], local_root)
 
 
 def _build_rollout_inputs(

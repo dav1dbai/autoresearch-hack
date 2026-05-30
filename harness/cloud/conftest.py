@@ -12,7 +12,7 @@ import pytest
 
 from harness.contracts import Budget, Rollout
 
-BUDGET = Budget(wall_seconds=10.0, max_concurrency=4)
+BUDGET = Budget(wall_seconds=10.0)
 
 _SOLVE_SRC = """
 from harness.contracts import Submission

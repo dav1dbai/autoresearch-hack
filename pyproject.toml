@@ -1,7 +1,7 @@
 [project]
 name = "ar2"
 version = "0.1.0"
-description = "AR² — autoresearch on autoresearch. Evolve the whole AR repo (DGM-style), scored on held-out verifiable envs. See proof/DESIGN.md."
+description = "AR² — autoresearch on autoresearch. Evolve the research stack across versions, scored on held-out verifiable envs. See proof/DESIGN.md."
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2",

@@ -13,6 +13,7 @@ from harness.tracing.sync import (
     sync_spans,
     workshop_db_path,
     workshop_enabled,
+    workshop_ui_push_enabled,
     workshop_url,
 )
 from harness.tracing.telemetry import (
@@ -43,6 +44,7 @@ __all__ = [
     "sync_spans",
     "workshop_db_path",
     "workshop_enabled",
+    "workshop_ui_push_enabled",
     "workshop_url",
     "write_span",
 ]

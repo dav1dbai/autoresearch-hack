@@ -11,6 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from harness.contracts import Budget, Env, Rollout, Submission
+from harness.runtime.loader import load_ar
 from harness.runtime.referee import make_referee
 from harness.runtime.sandbox import make_spawn
 from harness.tracing.telemetry import inject_for_rollout, write_span
@@ -87,10 +88,8 @@ def run_rollout_once(
             )
             return result
 
-        spawn = make_spawn(budget.max_concurrency)
+        spawn = make_spawn()
         task = env.reset()
-        from harness.runtime.loader import load_ar
-
         solve = load_ar(str(ar_dir)).solve
         solve(task, budget, tracked_score, spawn)
 

@@ -10,8 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from harness.contracts import Archive, Attempt, Budget
-from obs.dashboard import build_report, _load_attempts, _cost_per_version
+from harness.contracts import Archive, Attempt, Budget, Rollout
+from obs.dashboard import (
+    build_report,
+    _load_attempts,
+    _cost_per_version,
+    _run_timeline_html,
+    _improve_activity_html,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -19,7 +25,7 @@ from obs.dashboard import build_report, _load_attempts, _cost_per_version
 # ---------------------------------------------------------------------------
 
 def _make_budget(usd: float = 0.01) -> Budget:
-    return Budget(wall_seconds=60.0, usd=usd, tokens=1000, max_concurrency=1)
+    return Budget(wall_seconds=60.0, usd=usd, tokens=1000)
 
 
 def _make_archive() -> tuple[Archive, list[Attempt]]:
@@ -224,3 +230,70 @@ class TestBuildReport:
         content = out_path.read_text()
         # lineage SVG must contain an edge (dashed line for parent-child)
         assert "stroke-dasharray" in content
+
+    def test_run_timeline_and_improve_sections(self, tmp_path: Path) -> None:
+        _, attempts = _make_archive()
+        archive_path = tmp_path / "archive.jsonl"
+        with archive_path.open("w") as f:
+            for a in attempts:
+                f.write(a.model_dump_json() + "\n")
+
+        events_path = tmp_path / "run_events.jsonl"
+        events_path.write_text(
+            json.dumps(
+                {
+                    "ts": 1710000000.0,
+                    "phase": "improve_start",
+                    "message": "meta-agent improve from v0",
+                    "version": 0,
+                }
+            )
+            + "\n"
+        )
+
+        ver_root = tmp_path / "versions" / "v_test"
+        ver_root.mkdir(parents=True)
+        (ver_root / "improve_prompt.md").write_text("Edit train.py to use Triton.")
+        (ver_root / "agent.log").write_text("codex: applied kernel tweak")
+
+        attempts[1] = attempts[1].model_copy(update={"source_ref": str(ver_root)})
+        with archive_path.open("w") as f:
+            for a in attempts:
+                f.write(a.model_dump_json() + "\n")
+
+        out_path = tmp_path / "report.html"
+        build_report(
+            archive_path,
+            tmp_path / "traces.db",
+            out_path,
+            events_path=events_path,
+            versions_root=tmp_path / "versions",
+        )
+        content = out_path.read_text()
+        assert "Live run timeline" in content
+        assert "improve_start" in content
+        assert "Edit train.py" in content
+        assert "codex: applied kernel tweak" in content
+        assert "Attempt detail" in content
+
+    def test_inner_curves_in_report(self, tmp_path: Path) -> None:
+        rollout = Rollout(
+            env_id="matmul_train",
+            split="train",
+            rewards=[0.1, 0.3, 0.5],
+            final_reward=0.5,
+            cost=_make_budget(),
+            trace_id="t1",
+        )
+        attempt = Attempt(
+            version=0,
+            train_reward=0.5,
+            heldout_reward=0.4,
+            cost=_make_budget(),
+            train_rollouts=[rollout],
+        )
+        archive_path = tmp_path / "archive.jsonl"
+        archive_path.write_text(attempt.model_dump_json() + "\n")
+        out_path = tmp_path / "report.html"
+        build_report(archive_path, tmp_path / "missing.db", out_path)
+        assert "0.100 → 0.300 → 0.500" in out_path.read_text()

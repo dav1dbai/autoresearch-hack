@@ -41,7 +41,7 @@ class TestModalFanOut:
             snap_ref, env_spec, budget_dict, inject_env, trace_id = item
             assert snap_ref == "snap_abc"
             assert "id" in env_spec
-            assert "max_concurrency" in budget_dict
+            assert "wall_seconds" in budget_dict
             assert isinstance(inject_env, dict)
             assert trace_id
 
@@ -53,7 +53,7 @@ class TestModalFanOut:
         monkeypatch.setenv("MODAL_PROFILE", "autoresearch-hack")
 
         mr = _fresh_modal_runner(monkeypatch)
-        budget = Budget(wall_seconds=30.0, max_concurrency=7)
+        budget = Budget(wall_seconds=30.0)
         envs = [_FakeEnv("env-x"), _FakeEnv("env-y")]
         captured: list[dict] = []
 
@@ -67,7 +67,7 @@ class TestModalFanOut:
         with patch.object(mr, "upload_snapshot", return_value="snap_xyz"):
             mr.run_rollouts_parallel(_make_ar_dir(tmp_path), envs, budget)
 
-        assert all(b["max_concurrency"] == 7 for b in captured)
+        assert all(b["wall_seconds"] == 30.0 for b in captured)
 
     def test_profile_guard_fires(self, tmp_path, monkeypatch):
         monkeypatch.setenv("AR2_BACKEND", "modal")
@@ -135,7 +135,7 @@ class TestLocalFanOut:
             if key == "harness.runtime.sandbox":
                 monkeypatch.delitem(sys.modules, key, raising=False)
 
-        from harness.runtime.sandbox import make_spawn
+        from harness.runtime.sandbox import _make_spawn_local
 
         active: list[int] = []
         peak: list[int] = []
@@ -150,7 +150,7 @@ class TestLocalFanOut:
                 active.remove(x)
             return x
 
-        spawn = make_spawn(2)
+        spawn = _make_spawn_local(2)
         results = spawn(work, list(range(6)))
         assert max(peak) <= 2
         assert sorted(results) == list(range(6))
@@ -224,12 +224,30 @@ class TestResultAssembly:
 
         class _FakeArObj:
             def improve(self, archive, budget, spawn):
+                import os
+
+                vr = os.environ.get("AR2_VERSION_ROOT")
                 d = tmp_path / f"cand_{uuid.uuid4().hex[:8]}"
-                d.mkdir()
+                if vr:
+                    d = Path(vr)
+                else:
+                    d.mkdir()
+                ar = d / "ar"
+                ar.mkdir(parents=True, exist_ok=True)
+                (ar / "entrypoint.py").write_text(
+                    "def solve(t,b,s,sp): pass\ndef improve(a,b,sp): pass\n"
+                )
+                rt = d / "harness" / "runtime"
+                rt.mkdir(parents=True, exist_ok=True)
+                (rt / "score.py").write_text("# stub\n")
                 return d
 
+        def fake_improve_on_modal(parent_source_ref, archive, budget, workshop_traj=""):
+            return _FakeArObj().improve(archive, budget, lambda f, a: [])
+
         from harness.loop.outer import drive
-        archive = drive(
+        with patch("harness.cloud.runner.run_improve_on_modal", side_effect=fake_improve_on_modal):
+            archive = drive(
             tmp_path / "ar0",
             [_FakeEnv("train-e", "train")],
             [_FakeEnv("ho-e", "heldout")],
@@ -238,7 +256,7 @@ class TestResultAssembly:
             M=2,
             score_repo=fake_score_repo,
             load_ar=lambda ref: _FakeArObj(),
-        )
+            )
 
         assert len(archive.attempts) >= 3
 
@@ -258,8 +276,12 @@ class TestResultAssembly:
                 d.mkdir()
                 return d
 
+        def fake_improve_on_modal(parent_source_ref, archive, budget, workshop_traj=""):
+            return _FakeArObj().improve(archive, budget, lambda f, a: [])
+
         from harness.loop.outer import drive
-        archive = drive(
+        with patch("harness.cloud.runner.run_improve_on_modal", side_effect=fake_improve_on_modal):
+            archive = drive(
             tmp_path / "ar0",
             [_FakeEnv("t")],
             [_FakeEnv("h", "heldout")],
@@ -268,7 +290,7 @@ class TestResultAssembly:
             M=1,
             score_repo=fake_score_repo,
             load_ar=lambda ref: _FakeArObj(),
-        )
+            )
 
         versions = [a.version for a in archive.attempts]
         assert len(set(versions)) == len(versions)

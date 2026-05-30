@@ -27,11 +27,28 @@ obs/archive.db
 obs/ar2_workshop.db
 obs/report.html
 obs/*.jsonl
+obs/runs/
+obs/run_logs/
+obs/workshop_public.url
+obs/workshop_ngrok.pid
+obs/workshop_ngrok.log
+obs/workshop_tunnel.pid
+obs/workshop_tunnel.log
+obs/workshop_tunnel.kind
 obs/rollouts/
 
 # Session / handoff scratch at repo root
 /*.jsonl
 HANDOFF_session.jsonl
+
+# Local agent / MCP state (may contain credentials or machine-specific paths)
+.agents/
+.claude/
+.codex/
+.codex-inner/
+.cursor/mcp.json
+.mcp.json
+opencode.json
 
 # Logs
 *.log

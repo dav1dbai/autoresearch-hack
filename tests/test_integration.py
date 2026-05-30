@@ -1,8 +1,7 @@
 """End-to-end integration (offline, zero billing).
 
 The REAL outer loop + Archive + dashboard compose; only the compute layer
-(sandbox / coding agents) is stubbed. Hack review is deferred to the outer-loop
-agent — harness evaluate() leaves Attempt.hack_flags empty.
+(sandbox / coding agents) is stubbed.
 
 Proves: the loop turns (archive grows across versions), held-out reward drives
 selection, and report.html renders.
@@ -37,22 +36,35 @@ def _stub_score_repo(ar_dir, envs, budget, **kwargs):
 
 class _FakeAR:
     def improve(self, archive, budget, spawn):
-        v = len(archive.attempts)  # next version index
-        d = Path(tempfile.mkdtemp(prefix="ar_v_"))
-        (d / "_v.txt").write_text(str(v))
+        import os
+
+        v = len(archive.attempts)
+        vr = os.environ.get("AR2_VERSION_ROOT")
+        d = Path(vr) if vr else Path(tempfile.mkdtemp(prefix="v_"))
+        ar = d / "ar"
+        ar.mkdir(parents=True, exist_ok=True)
+        (ar / "_v.txt").write_text(str(v))
+        ep = ar / "entrypoint.py"
+        if not ep.exists():
+            ep.write_text("def solve(t,b,s,sp): pass\ndef improve(a,b,sp): pass\n")
+        rt = d / "harness" / "runtime"
+        rt.mkdir(parents=True, exist_ok=True)
+        if not (rt / "score.py").exists():
+            (rt / "score.py").write_text("# stub\n")
         return d
 
 
 @pytest.mark.smoke
 def test_loop_turns_and_report_renders(tmp_path):
     ar0 = tmp_path / "ar0"
-    ar0.mkdir()  # no marker -> version 0
+    ar0.mkdir()
+    (ar0 / "entrypoint.py").write_text("def solve(t,b,s,sp): pass\ndef improve(a,b,sp): pass\n")
 
     train = [SimpleNamespace(id="train_env", split="train")]
     heldout = [SimpleNamespace(id="heldout_env", split="heldout")]
 
     archive = drive(
-        ar0, train, heldout, Budget(wall_seconds=1.0, max_concurrency=1),
+        ar0, train, heldout, Budget(wall_seconds=1.0),
         K=2, M=1,
         score_repo=_stub_score_repo,
         load_ar=lambda source_ref: _FakeAR(),
@@ -60,7 +72,6 @@ def test_loop_turns_and_report_renders(tmp_path):
 
     by_v = {a.version: a for a in archive.attempts}
     assert 0 in by_v and len(archive.attempts) >= 3      # loop turned across generations
-    assert all(not a.hack_flags for a in archive.attempts)
     best = archive.best()
     assert best is not None and best.version == 1
     assert best.heldout_reward == pytest.approx(0.5)
@@ -96,11 +107,11 @@ def test_score_repo_inner_loop_accumulates_rewards(tmp_path, monkeypatch):
 
     # Neutralize out-of-process referee; D-00 is about the loop turning.
     monkeypatch.setenv("MATMUL_STUB", "1")
-    monkeypatch.setattr("harness.runtime.rollout.make_referee", lambda env: env.score)
+    monkeypatch.setattr("harness.runtime.referee.make_referee", lambda env: env.score)
 
     ar_dir = Path(__file__).parent.parent / "ar"
     env = MatmulEnv(split="train", M=64, N=64, K=64, reps=3)
-    rolls = sr.score_repo(ar_dir, [env], Budget(wall_seconds=10.0, max_concurrency=1))
+    rolls = sr.score_repo(ar_dir, [env], Budget(wall_seconds=10.0))
 
     assert len(rolls) == 1
     assert len(rolls[0].rewards) >= 2  # baseline + >=1 inner iteration

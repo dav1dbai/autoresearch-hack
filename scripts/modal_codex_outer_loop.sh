@@ -9,7 +9,10 @@ export MATMUL_STUB=0
 export RAINDROP_WORKSHOP=1
 export AR2_OBS_CACHE=1
 export AR2_STALE_ITERS="${AR2_STALE_ITERS:-2}"
-# INNER_AGENT_CMD / MUTATE_AGENT_CMD from .env (default: codex exec)
+# INNER_AGENT_CMD / MUTATE_AGENT_CMD from .env (default: raindrop_codex_exec.sh)
+
+# shellcheck source=scripts/modal_workshop_ngrok.sh
+source "$(dirname "$0")/modal_workshop_ngrok.sh"
 
 K="${AR2_K:-1}"
 M="${AR2_M:-1}"

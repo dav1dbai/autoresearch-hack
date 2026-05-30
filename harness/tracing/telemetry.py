@@ -41,11 +41,30 @@ _GPU_ENV_KEYS = (
     "MODAL_PROFILE",
 )
 
+# Raindrop Codex wrapper env forwarded into rollout/improve sandboxes.
+_RAINDROP_ENV_KEYS = (
+    "AR2_REPO_ROOT",
+    "RAINDROP_BIN",
+    "RAINDROP_WORKSHOP_URL",
+    "RAINDROP_LOCAL_DEBUGGER",
+    "RAINDROP_WORKSHOP_CODEX_BIN",
+    "RAINDROP_WORKSHOP_CODEX_BYPASS_PERMISSIONS",
+    "RAINDROP_WORKSHOP_CODEX_APPROVAL_POLICY",
+    "RAINDROP_WORKSHOP_CODEX_SANDBOX",
+    "AR2_CODEX_EXTRA_FLAGS",
+)
+
 
 def forward_gpu_env() -> dict[str, str]:
     """Copy GPU/matmul config from the host into a rollout sandbox."""
     import os
     return {k: v for k in _GPU_ENV_KEYS if (v := os.environ.get(k))}
+
+
+def forward_raindrop_env() -> dict[str, str]:
+    """Copy Raindrop Codex wrapper config into rollout/improve sandboxes."""
+    import os
+    return {k: v for k in _RAINDROP_ENV_KEYS if (v := os.environ.get(k))}
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +128,7 @@ def inject_for_rollout(
     if trace_file is not None:
         out["AR2_TRACE_FILE"] = str(trace_file)
     out.update(forward_gpu_env())
+    out.update(forward_raindrop_env())
     return out
 
 def write_span(

@@ -5,7 +5,7 @@ score_repo:
     1. Optionally call inject(env, trace_id) for telemetry env-vars.
     2. Import ar.entrypoint.solve from ar_dir and run it with:
          score  = make_referee(env)   (out-of-process grader)
-         spawn  = make_spawn(budget.max_concurrency)  (capped fanout)
+         spawn  = make_spawn()  (harness-internal cap if ar/ uses it)
     3. Record the inner-curve rewards from each score() call.
     4. Append score spans to a local trace.jsonl (local backend).
     5. Return a Rollout (final_reward = best reward seen).
@@ -24,7 +24,6 @@ import os
 from collections.abc import Callable
 from pathlib import Path
 
-from harness.runtime.loader import load_ar
 from harness.contracts import Budget, Env, Rollout
 from harness.runtime.rollout import InjectFn, run_rollout_once
 
@@ -111,6 +110,34 @@ def evaluate_rollouts(
     candidate: str = "",
 ) -> tuple[list[Rollout], list[Rollout]]:
     """Score train + heldout envs; Modal batches both when AR2_MODAL_RUN_EVALUATE=1."""
+    cand = candidate or str(ar_dir)
+    from harness.runtime.dynamic import force_host_runtime, has_snapshot_runtime, load_runtime_module
+
+    if has_snapshot_runtime(cand):
+        snap_score = load_runtime_module(cand, "score")
+        fn = getattr(snap_score, "evaluate_rollouts", None)
+        if callable(fn) and fn.__module__ != __name__:
+            with force_host_runtime():
+                return fn(
+                    ar_dir, train, heldout, budget, inject,
+                    version=version, candidate=cand,
+                )
+    return _evaluate_rollouts_host(
+        ar_dir, train, heldout, budget, inject, version=version, candidate=cand,
+    )
+
+
+def _evaluate_rollouts_host(
+    ar_dir: Path,
+    train: list[Env],
+    heldout: list[Env],
+    budget: Budget,
+    inject: Callable[..., dict[str, str]] | None = None,
+    *,
+    version: int = 0,
+    candidate: str = "",
+) -> tuple[list[Rollout], list[Rollout]]:
+    """Host evaluate_rollouts implementation (D-15b entry after snapshot dispatch)."""
     cand = candidate or str(ar_dir)
     if _backend() == "modal" and os.environ.get("AR2_MODAL_RUN_EVALUATE", "1") == "1":
         from harness.cloud.runner import run_evaluate_on_modal

@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+import harness.tracing.sync as sync_mod
 from harness.contracts import Attempt, Budget, Rollout
 from harness.tracing.sync import (
     _cost_usd,
@@ -138,6 +139,40 @@ class TestSync:
         tf.write_text("")
         db = tmp / "traces.db"
         assert sync([tf], canonical=db) == 0
+
+    def test_push_spans_live_includes_run_id(self, monkeypatch: pytest.MonkeyPatch):
+        captured: list[dict[str, Any]] = []
+        monkeypatch.setenv("RAINDROP_WORKSHOP", "1")
+        monkeypatch.setenv("AR2_RUN_ID", "raindrop-k2")
+
+        class FakeResponse:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self) -> bytes:
+                return b'{"spansIngested": 1}'
+
+        def fake_urlopen(req, timeout=5.0):
+            captured.append(json.loads(req.data.decode("utf-8")))
+            return FakeResponse()
+
+        monkeypatch.setattr(sync_mod.urllib.request, "urlopen", fake_urlopen)
+
+        pushed = sync_mod.push_spans_live([
+            _make_span(tool_name="evaluate", tool_input="smoke", version=0)
+        ])
+
+        assert pushed == 1
+        span = captured[0]["resourceSpans"][0]["scopeSpans"][0]["spans"][0]
+        assert span["name"].startswith("[raindrop-k2] v0 evaluate")
+        attrs = {a["key"]: a["value"] for a in span["attributes"]}
+        assert attrs["ar2.run_id"]["stringValue"] == "raindrop-k2"
+        assert attrs["ar2.display_name"]["stringValue"].startswith("[raindrop-k2]")
 
 
 class TestSyncAllLocal:

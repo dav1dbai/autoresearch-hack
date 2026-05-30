@@ -1,4 +1,4 @@
-"""AR² harness — evolutionary archive persistence.
+"""AR² harness — version archive persistence (jsonl).
 
 save / load round-trip the Archive through jsonl (one Attempt per line).
 outer_curve extracts the (version, best-heldout-so-far, hacked?) series
@@ -49,3 +49,42 @@ def outer_curve(archive: Archive) -> list[tuple[int, float, bool]]:
             best_clean = max(best_clean, a.heldout_reward)
         curve.append((a.version, best_clean, hacked))
     return curve
+
+
+def efficiency_curve(archive: Archive) -> list[dict]:
+    """Per-version inner-loop sample efficiency — the second-derivative instrument.
+
+    For each archived version, aggregate its TRAIN rollouts (the climb the inner
+    agent actually runs) into: attempts (scored edits), baseline (first reward),
+    final (best reward reached), gain (final-baseline) and gain_per_attempt — the
+    climb rate dR/dattempt.  A later AR version that reaches more reward in fewer
+    attempts shows up as a higher gain_per_attempt: the meta-loop made the climb
+    more EFFICIENT, not merely higher.  Computed from already-persisted rewards;
+    no extra instrumentation."""
+    out: list[dict] = []
+    for a in archive.attempts:
+        attempts: list[int] = []
+        baselines: list[float] = []
+        finals: list[float] = []
+        for r in a.train_rollouts or []:
+            rw = list(r.rewards or [])
+            if not rw:
+                continue
+            attempts.append(len(rw))
+            baselines.append(rw[0])
+            finals.append(max(rw))
+        if not attempts:
+            continue
+        n = sum(attempts) / len(attempts)
+        base = sum(baselines) / len(baselines)
+        fin = sum(finals) / len(finals)
+        out.append({
+            "version": a.version,
+            "attempts": n,
+            "baseline": base,
+            "final": fin,
+            "gain": fin - base,
+            "gain_per_attempt": (fin - base) / max(n - 1.0, 1.0),
+            "reward_per_attempt": fin / max(n, 1.0),
+        })
+    return out

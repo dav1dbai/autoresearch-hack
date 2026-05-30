@@ -22,6 +22,30 @@ def vast_secret() -> modal.Secret:
     return modal.Secret.from_name(VAST_SECRET_NAME)
 
 
+def ensure_openai_modal_secret(*, api_key: str | None = None) -> str:
+    """Create/update the OpenAI Modal secret from the host environment."""
+    from infra.modal.images import assert_hackathon_profile
+
+    key = api_key or os.environ.get("OPENAI_API_KEY", "")
+    if not key:
+        raise RuntimeError(
+            "OPENAI_API_KEY not set — add to .env before AR2_BACKEND=modal or run:\n"
+            f"  modal secret create {OPENAI_SECRET_NAME} OPENAI_API_KEY=... --force"
+        )
+    assert_hackathon_profile()
+    subprocess.run(
+        [
+            "modal", "secret", "create", OPENAI_SECRET_NAME,
+            f"OPENAI_API_KEY={key}",
+            "--force",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return OPENAI_SECRET_NAME
+
+
 def ensure_vast_modal_secret(*, api_key: str | None = None) -> str:
     """Create/update the Vast Modal secret from the host environment."""
     from infra.modal.images import assert_hackathon_profile

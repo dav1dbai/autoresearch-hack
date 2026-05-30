@@ -93,6 +93,11 @@ def main() -> None:
         help="Small GPU matmul shapes (256³) for fast inner-loop smoke",
     )
     parser.add_argument(
+        "--cuda-oxide",
+        action="store_true",
+        help="cuda-oxide Rust→PTX kernel envs (gemm+reduction) on the deployed ar2-cudaoxide H100 app",
+    )
+    parser.add_argument(
         "--no-workshop",
         action="store_true",
         help="Skip Raindrop/OTLP; still writes obs/traces.db + obs/archive.db",
@@ -136,11 +141,31 @@ def main() -> None:
     if args.gpu and os.environ.get("AR2_BACKEND") == "modal" and not args.vast_rent:
         os.environ.setdefault("AR2_GPU_BACKEND", "modal")
 
+    if args.cuda_oxide and os.environ.get("AR2_BACKEND") == "modal":
+        # Score in-container (env.score direct, no subprocess referee). cuda_oxide
+        # self-wires its grader via Function.from_name, so this "modal" value only
+        # flips gpu_scoring in rollout.py — matmul_runner()/gpu_backend() are never
+        # called on the --cuda-oxide path, so it never routes through matmul GPU code.
+        os.environ.setdefault("AR2_GPU_BACKEND", "modal")
+        import modal as _modal
+
+        try:
+            _modal.Function.from_name("ar2-cudaoxide", "compile_and_run").hydrate()
+            progress("modal: cuda-oxide grader 'ar2-cudaoxide' reachable ✓")
+        except Exception as exc:  # noqa: BLE001
+            progress(
+                f"WARNING: cuda-oxide grader 'ar2-cudaoxide' not reachable ({exc}). "
+                "Deploy it once: modal deploy envs/cuda_oxide/app.py"
+            )
+
     if args.modal_ephemeral:
         os.environ["AR2_MODAL_DEPLOYED"] = "0"
         os.environ.setdefault("AR2_MODAL_REUSE", "1")
     elif os.environ.get("AR2_BACKEND") == "modal":
         os.environ.setdefault("AR2_MODAL_DEPLOYED", "1")
+        from infra.modal.secrets import ensure_openai_modal_secret
+
+        ensure_openai_modal_secret()
         if os.environ.get("VAST_API_KEY"):
             from infra.modal.secrets import ensure_vast_modal_secret
 
@@ -164,14 +189,18 @@ def main() -> None:
     if args.gpu_smoke:
         os.environ["AR2_GPU_SMOKE"] = "1"
 
-    if args.gpu and not args.stub:
+    if args.cuda_oxide:
+        from envs.pools import cuda_oxide_pools
+
+        train, heldout = cuda_oxide_pools()
+    elif args.gpu and not args.stub:
         from harness.backends.gpu import matmul_runner
 
         train, heldout = gpu_matmul_pools(runner=matmul_runner(), smoke=args.gpu_smoke)
     else:
         train, heldout = default_matmul_pools(stub=args.stub)
 
-    budget = Budget(wall_seconds=args.budget_seconds, max_concurrency=1)
+    budget = Budget(wall_seconds=args.budget_seconds)
 
     archive = drive(
         args.ar_dir.resolve(),

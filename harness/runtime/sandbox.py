@@ -64,18 +64,15 @@ def write_file(sb: modal.Sandbox, path: str, text: str) -> None:
     sb.filesystem.write_text(text, path)
 
 
-def make_spawn(max_concurrency: int) -> SpawnFn:
-    """Return a spawn(fn, list_of_args) -> list capped at max_concurrency.
+# Hard ceiling if a future ar/ calls spawn(); not exposed on Budget or CLI.
+_SPAWN_FANOUT_CAP = 32
 
-    AR2_BACKEND=local  (default): ThreadPoolExecutor with max_workers=max_concurrency.
-    AR2_BACKEND=modal: each fn must be a modal.Function; calls are fanned out via
-      Function.spawn() behind a threading.Semaphore(max_concurrency) so at most
-      max_concurrency containers run at once.  Results are collected via .get().
-    The cap is ALWAYS enforced here; ar/ code cannot exceed it.
-    """
+
+def make_spawn() -> SpawnFn:
+    """Return spawn(fn, args) capped at _SPAWN_FANOUT_CAP (harness-internal only)."""
     if _BACKEND == "modal":
-        return _make_spawn_modal(max_concurrency)
-    return _make_spawn_local(max_concurrency)
+        return _make_spawn_modal(_SPAWN_FANOUT_CAP)
+    return _make_spawn_local(_SPAWN_FANOUT_CAP)
 
 
 def _make_spawn_local(max_concurrency: int) -> SpawnFn:

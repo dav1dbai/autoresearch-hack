@@ -11,6 +11,10 @@ def _mean_final(rolls: list[Rollout]) -> float:
     return sum(r.final_reward for r in rolls) / len(rolls) if rolls else 0.0
 
 
+def mean_final_reward(rolls: list[Rollout]) -> float:
+    return _mean_final(rolls)
+
+
 def attempt_from_rollouts(
     train_rolls: list[Rollout],
     heldout_rolls: list[Rollout],

@@ -20,12 +20,12 @@
 |---|-----|--------|-----------------|
 | 0 | [D-00](#d-00-done-semantics-kill-the-inner-loop) | **DONE** | Fix `StepResult.done` + env returns so `solve()` runs ≥1 agent edit |
 | 1 | [D-01](#d-01-nanochat-held-out--real-distribution-shift) | **TODO** | Different data seed/shard for nanochat `heldout` split |
-| 2 | [D-02](#d-02-parent-sampling-not-greedy-frontier) | **TODO** | Replace `Archive.frontier()` with `sample_parents()` |
+| 2 | [D-02](#d-02-parent-sampling-not-greedy-frontier) | **DONE** | `Archive.sample_parents()` wired in `drive()` |
 | 3 | [D-03](#d-03-persist-inner-curves-on-attempt) | **DONE** | `Attempt` stores rollouts; `evaluate()` stops dropping curves |
-| 4 | [D-04](#d-04-metrics--dashboard-second-derivative-ui) | **TODO** | `obs/metrics.py` + rebuild `obs/dashboard.py` per [Dashboard](#dashboard--metrics-decided) |
-| 5 | [D-05](#d-05-wire-telemetry-by-default) | **PARTIAL** | `score_repo` defaults to `inject_for_rollout`; hack_detector not wired |
-| 6 | [D-06](#d-06-nanochat-val_bpb-not-from-agent-stdout) | **TODO** | Score via harness-controlled evaluator, not `train.py` stdout |
-| 7 | [D-07](#d-07-improve-smoke-check-before-eval) | **TODO** | Reject broken `ar/` snapshots before `evaluate()` |
+| 4 | [D-04](#d-04-metrics--dashboard-second-derivative-ui) | **PARTIAL** | `obs/metrics.py` + ΔS table in dashboard; layered hero TBD |
+| 5 | [D-05](#d-05-wire-telemetry-by-default) | **PARTIAL** | `score_repo` defaults to `inject_for_rollout` |
+| 6 | [D-06](#d-06-nanochat-val_bpb-not-from-agent-stdout) | **PARTIAL** | `envs/nanochat_eval.py` harness subprocess; stub path unchanged |
+| 7 | [D-07](#d-07-improve-smoke-check-before-eval) | **DONE** | `smoke_check_version_snapshot()` in `drive()` before eval |
 | 8 | [D-08](#d-08-eval-protocol--seeds) | **TODO** | `EvalProtocol` (K=8, seeds≥3) + seed loop in evaluate |
 | 9 | [D-09](#d-09-outer-loop-cli) | **DONE** | `python -m harness` driver wiring env pools + persistence |
 | 10 | [D-10](#d-10-dedupe-rollout-execution) | **PARTIAL** | `harness/rollout.py` + `harness/evaluate.py` landed; `ar_loader.py` extracted |
@@ -33,7 +33,7 @@
 | 12 | [D-12](#d-12-env-spec-serialization) | **DEFER** | Formal `EnvSpec` on `BaseEnv` after Modal path stable |
 | 13 | [D-13](#d-13-import-dag-mechanical-refactor) | **DONE** | Mechanical import-layer cleanup per `ARCHITECTURE_DAG.md` steps 1→6 |
 | 14 | [D-14](#d-14-test-colocation) | **DONE** | Colocate unit tests with packages per `ARCHITECTURE_DAG.md` Part B T1→T6 |
-| 15 | [D-15](#d-15-mutation-boundaries-version-snapshots) | **PARTIAL** | Version snapshot = `ar/` + `harness/runtime/`; host drive fixed; eval reload TBD |
+| 15 | [D-15](#d-15-mutation-boundaries-version-snapshots) | **PARTIAL** | Snapshot + `AR2_REPO_ROOT`; D-15b snapshot runtime reload in `dynamic.py` |
 
 ---
 
@@ -41,7 +41,7 @@
 
 ### D-00: `done` semantics kill the inner loop
 
-**Status:** DONE  
+**Status:** DONE
 **Landed:** Documented semantic on `StepResult.done` (`harness/contracts.py`); `done=False` in `envs/nanochat.py`, `envs/matmul.py` (both returns). Tests: `test_ar_entrypoint::test_env_done_false_runs_iterations` (unit), `test_integration::test_score_repo_inner_loop_accumulates_rewards` (rollout `len(rewards) >= 2`), corrected stale `test_envs` assertion. Full suite 149 passed.  
 **Decision:** `StepResult.done` means **stop inner search** (target reached or terminal failure), **not** “this score call finished.” Envs with no natural terminal return `done=False`.
 
@@ -69,10 +69,10 @@
 
 ### D-02: Parent sampling, not greedy frontier
 
-**Status:** TODO  
-**Decision:** Replace top-k `Archive.frontier()` with DGM-style **`sample_parents(m)`**: sample non-hacked attempts with weight `∝ heldout_reward × 1/(1 + num_children)`. Keep unconditional `Archive.add`.
+**Status:** DONE
+**Decision:** Replace top-k `Archive.frontier()` with weighted **`sample_parents(m)`** (D-02): sample non-hacked attempts with weight `∝ heldout_reward × 1/(1 + num_children)`. Keep unconditional `Archive.add`.
 
-**Action:** Implement on `Archive` in `harness/contracts.py`; `drive()` calls `sample_parents` instead of `frontier()`.
+**Landed:** `Archive.sample_parents()` in `harness/contracts.py`; `drive()` uses `sample_parents(AR2_PARENT_K)`.
 
 **Acceptance:** Unit test: regression with low held-out but few children has nonzero selection probability; greedy top-k alone would never pick it.
 
@@ -80,7 +80,7 @@
 
 ### D-03: Persist inner curves on Attempt
 
-**Status:** TODO  
+**Status:** DONE
 **Decision:** Store full rollouts on each evaluation. Scalars (`train_reward`, `heldout_reward`) remain for selection; curves power S(N) / layered dashboard.
 
 **Action:**
@@ -130,10 +130,10 @@ Add `harness/evaluate.py::attempt_from_rollouts(...)`; wire from `outer_loop.eva
 
 ### D-07: Improve smoke-check before eval
 
-**Status:** TODO  
+**Status:** DONE
 **Decision:** Broken `improve()` output must not burn a full eval budget as `reward=0.0` archive entry.
 
-**Action:** After agent returns in `improve()`, `importlib` load + assert `solve`/`improve` exist; return sentinel or skip eval in `drive()` if check fails.
+**Landed:** `harness/loop/snapshot.py::smoke_check_version_snapshot()`; `drive()` skips failed snapshots.
 
 **Acceptance:** Corrupt snapshot never calls `score_repo`; archive does not gain a zero-reward version for import errors.
 
@@ -141,10 +141,10 @@ Add `harness/evaluate.py::attempt_from_rollouts(...)`; wire from `outer_loop.eva
 
 ### D-08: Eval protocol + seeds
 
-**Status:** TODO  
+**Status:** PARTIAL
 **Decision:** Separate **agent `Budget`** from harness **`EvalProtocol`**: `inner_max_iters=8`, `seeds≥3` for powered runs. Agents never see `EvalProtocol`.
 
-**Action:** Add `EvalProtocol` to `contracts.py`; loop seeds in `evaluate()`; report mean ± CI in metrics.
+**Landed:** `EvalProtocol` model in `contracts.py`; seed loop in `evaluate()` still TODO.
 
 **Acceptance:** Three seeds produce three rollouts per env on Attempt; metrics CI whiskers non-degenerate in test fixture.
 
@@ -152,7 +152,7 @@ Add `harness/evaluate.py::attempt_from_rollouts(...)`; wire from `outer_loop.eva
 
 ### D-09: Outer-loop CLI
 
-**Status:** TODO  
+**Status:** DONE
 **Decision:** README command must work: one entrypoint wires pools, K/M gens, archive path, `.env`.
 
 **Action:** Add `harness/__main__.py` (or `cli.py`): `uv run python -m harness --ar ar/ --backend local|modal`.
@@ -332,7 +332,7 @@ versions/v_<id>/
 
 **Acceptance:** After `improve()`, snapshot contains `ar/entrypoint.py` and `harness/runtime/score.py`; `load_ar(source_ref)` resolves `ar/` from snapshot root; tests green.
 
-**D-15b (TODO):** `evaluate()` imports `score_repo` / `rollout` from snapshot `harness/runtime/` when present.
+**D-15b (PARTIAL):** `harness/runtime/dynamic.py` reloads snapshot `harness/runtime/` in `evaluate_rollouts` / `run_rollout_once` when present.
 
 ---
 
@@ -340,11 +340,12 @@ versions/v_<id>/
 
 | Topic | Decision |
 |-------|----------|
+| `infra/collector.py` Modal telemetry sink | **DEFER** — optional live push; use `obs/run_events.jsonl` + dashboard instead |
 | Human baseline vs hand-tuned `program.md` | Nice-to-have comparison axis |
 | Cross-env generalization (nanochat train → matmul held-out) | Needed for generalization claims, not for “loop works” demo |
 | Pin model ID / temperature in `Attempt` | Log model string in `diff_summary` for now |
 | Fake spans to proxy | Accept as demo “interesting hack”; real integrity needs [D-05](#d-05-wire-telemetry-by-default) |
-| DGM-scale budget (~80 gen, $22k) | 5–10 gen demo; see measurement protocol |
+| Large-scale evolution budget (~80 gen) | 5–10 gen demo; see measurement protocol |
 
 ---
 

@@ -176,7 +176,13 @@ def drive(
     AR2_BACKEND=local (default): sequential loop — offline-safe, test-friendly.
     """
     from harness.loop.archive import save  # local import to avoid circular at module level
+    from harness.loop.snapshot import resolve_repo_root, smoke_check_version_snapshot
     from harness.util.progress import progress
+
+    os.environ.setdefault("AR2_REPO_ROOT", str(resolve_repo_root()))
+
+    def _noop_spawn(fn, list_of_args):
+        return [fn(*((a,) if not isinstance(a, tuple) else a)) for a in list_of_args]
 
     progress(f"drive: backend={_BACKEND} K={K} M={M} budget={budget.wall_seconds}s")
     from harness.runtime.score import modal_backend_label
@@ -198,20 +204,33 @@ def drive(
 
     archive = Archive()
     progress("drive: evaluating v0 seed")
+    try:
+        from obs.events import log_event
+        log_event("evaluate_start", "v0 seed evaluate", version=0)
+    except ImportError:
+        pass
     v0_attempt = _eval(ar0_dir, 0, None, "v0 seed", str(ar0_dir))
     archive.add(v0_attempt)
+    try:
+        from obs.events import log_event
+        log_event(
+            "evaluate_done",
+            f"v0 train={v0_attempt.train_reward:.4f} heldout={v0_attempt.heldout_reward:.4f}",
+            version=0,
+            extra={"train": v0_attempt.train_reward, "heldout": v0_attempt.heldout_reward},
+        )
+    except ImportError:
+        pass
     if _persist_path is not None:
         save(archive, _persist_path)
         progress(f"drive: archive persisted → {_persist_path}")
 
     version_counter = 1
 
-    def _noop_spawn(fn, list_of_args):
-        return [fn(*((a,) if not isinstance(a, tuple) else a)) for a in list_of_args]
-
     for gen in range(K):
         progress(f"drive: generation {gen + 1}/{K}")
-        parents = archive.frontier()
+        parent_k = int(os.environ.get("AR2_PARENT_K", "3"))
+        parents = archive.sample_parents(parent_k, seed=gen)
 
         from harness.tracing.sync import prepare_improve_context
 
@@ -224,11 +243,60 @@ def drive(
 
         # Collect all (cand_dir, parent_version) pairs — improve() per parent × M.
         def _improve_one(parent_attempt: Attempt) -> list[tuple[Path, int]]:
-            ar_obj = load_ar(parent_attempt.source_ref)
             candidate_dirs: list[Path] = []
-            for _ in range(M):
-                cand_dir = ar_obj.improve(improve_archive, budget, _noop_spawn)
-                candidate_dirs.append(cand_dir)
+            workshop_traj = os.environ.get("AR2_WORKSHOP_TRAJECTORY", "")
+            if _BACKEND == "modal":
+                from harness.cloud.runner import run_improve_on_modal
+
+                progress(f"drive: improve v{parent_attempt.version} on Modal (×{M})")
+                try:
+                    from obs.events import log_event
+                    log_event(
+                        "improve_start",
+                        f"meta-agent improve from v{parent_attempt.version}",
+                        version=parent_attempt.version,
+                        parent=parent_attempt.version,
+                    )
+                except ImportError:
+                    pass
+                for _ in range(M):
+                    cand_dir = run_improve_on_modal(
+                        parent_attempt.source_ref,
+                        improve_archive,
+                        budget,
+                        workshop_traj=workshop_traj,
+                    )
+                    ok, err = smoke_check_version_snapshot(cand_dir)
+                    if not ok:
+                        progress(f"drive: skip broken Modal snapshot: {err}")
+                        continue
+                    candidate_dirs.append(cand_dir)
+                    try:
+                        from obs.events import log_event
+                        log_event(
+                            "improve_done",
+                            f"candidate snapshot → {cand_dir.name}",
+                            parent=parent_attempt.version,
+                            path=cand_dir,
+                        )
+                    except ImportError:
+                        pass
+            else:
+                from harness.loop.snapshot import create_version_snapshot
+
+                ar_obj = load_ar(parent_attempt.source_ref)
+                for _ in range(M):
+                    version_root = create_version_snapshot(parent_attempt.source_ref)
+                    os.environ["AR2_VERSION_ROOT"] = str(version_root)
+                    try:
+                        cand_dir = ar_obj.improve(improve_archive, budget, _noop_spawn)
+                    finally:
+                        os.environ.pop("AR2_VERSION_ROOT", None)
+                    ok, err = smoke_check_version_snapshot(cand_dir)
+                    if not ok:
+                        progress(f"drive: skip broken snapshot: {err}")
+                        continue
+                    candidate_dirs.append(cand_dir)
             return [(d, parent_attempt.version) for d in candidate_dirs]
 
         all_candidates: list[tuple[Path, int]] = []
@@ -260,10 +328,42 @@ def drive(
                     attempt = fut.result()
                     results[attempt.version] = attempt
             for _, _, ver in versioned:
-                archive.add(results[ver])
+                attempt = results[ver]
+                archive.add(attempt)
+                try:
+                    from obs.events import log_event
+                    log_event(
+                        "evaluate_done",
+                        f"v{attempt.version} train={attempt.train_reward:.4f} "
+                        f"heldout={attempt.heldout_reward:.4f}",
+                        version=attempt.version,
+                        parent=attempt.parent,
+                        extra={
+                            "train": attempt.train_reward,
+                            "heldout": attempt.heldout_reward,
+                        },
+                    )
+                except ImportError:
+                    pass
         else:
             for item in versioned:
-                archive.add(_eval_candidate(item))
+                attempt = _eval_candidate(item)
+                archive.add(attempt)
+                try:
+                    from obs.events import log_event
+                    log_event(
+                        "evaluate_done",
+                        f"v{attempt.version} train={attempt.train_reward:.4f} "
+                        f"heldout={attempt.heldout_reward:.4f}",
+                        version=attempt.version,
+                        parent=attempt.parent,
+                        extra={
+                            "train": attempt.train_reward,
+                            "heldout": attempt.heldout_reward,
+                        },
+                    )
+                except ImportError:
+                    pass
 
         if _persist_path is not None:
             save(archive, _persist_path)

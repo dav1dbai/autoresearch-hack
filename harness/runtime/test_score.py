@@ -50,7 +50,7 @@ from harness.contracts import (  # noqa: E402
     Submission,
     TaskSpec,
 )
-from harness.runtime.sandbox import exec, make_sandbox, make_spawn, read_file, write_file  # noqa: E402
+from harness.runtime.sandbox import exec, make_sandbox, make_spawn, read_file, write_file, _make_spawn_local  # noqa: E402
 from harness.runtime.referee import make_referee  # noqa: E402
 from harness.runtime.score import score_repo  # noqa: E402
 
@@ -154,11 +154,11 @@ class TestFileHelpers:
 
 class TestMakeSpawn:
     def test_empty_list(self):
-        spawn = make_spawn(4)
+        spawn = make_spawn()
         assert spawn(lambda x: x, []) == []
 
     def test_runs_all_items(self):
-        spawn = make_spawn(4)
+        spawn = make_spawn()
         results = spawn(lambda x: x * 2, [1, 2, 3])
         assert sorted(results) == [2, 4, 6]
 
@@ -177,17 +177,17 @@ class TestMakeSpawn:
                 active.remove(x)
             return x
 
-        spawn = make_spawn(2)
+        spawn = _make_spawn_local(2)
         spawn(work, list(range(6)))
         assert max(peak) <= 2
 
     def test_single_arg_callable(self):
-        spawn = make_spawn(2)
+        spawn = _make_spawn_local(2)
         results = spawn(lambda x: x + 10, [5, 6])
         assert sorted(results) == [15, 16]
 
     def test_tuple_args_unpacked(self):
-        spawn = make_spawn(2)
+        spawn = _make_spawn_local(2)
         results = spawn(lambda a, b: a + b, [(1, 2), (3, 4)])
         assert sorted(results) == [3, 7]
 
