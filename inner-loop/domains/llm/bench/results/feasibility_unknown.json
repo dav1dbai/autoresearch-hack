@@ -1,0 +1,47 @@
+{
+  "model": {
+    "id": "Qwen/Qwen3.6-27B-FP8",
+    "bf16_id": "Qwen/Qwen3.6-27B",
+    "gguf_repo": "unsloth/Qwen3.6-27B-GGUF",
+    "gguf_quant": "Q8_0",
+    "max_model_len": 32768,
+    "reasoning_parser": "qwen3"
+  },
+  "gpu_slug": "unknown",
+  "environment": {
+    "cuda_visible": null,
+    "gpu_error": "No module named 'torch'"
+  },
+  "elapsed_s": 0.05,
+  "engines": [
+    {
+      "engine": "mirage",
+      "track": "C",
+      "kind": "megakernel",
+      "status": "fail",
+      "details": {
+        "ok": false,
+        "mirage_home": "/opt/mirage",
+        "demo_exists": false,
+        "target_model": "Qwen/Qwen3.6-27B",
+        "demo_model": "Qwen/Qwen3-8B",
+        "target_supported": false,
+        "notes": "MPK megakernel compiler; Qwen3-8B demo exists, Qwen3.6 GDN port required",
+        "import_ok": false,
+        "error": "import mirage: No module named 'mirage'"
+      }
+    },
+    {
+      "engine": "luminal",
+      "track": "C",
+      "kind": "megakernel",
+      "status": "fail",
+      "details": {
+        "ok": false,
+        "error": "No module named 'luminal'",
+        "notes": "Megakernel compiler; Llama/Phi examples only, GDN port required",
+        "target_qwen36": "blocked_until_port"
+      }
+    }
+  ]
+}

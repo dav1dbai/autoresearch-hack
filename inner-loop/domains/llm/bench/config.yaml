@@ -1,0 +1,71 @@
+model:
+  id: Qwen/Qwen3.6-27B-FP8
+  bf16_id: Qwen/Qwen3.6-27B
+  gguf_repo: unsloth/Qwen3.6-27B-GGUF
+  gguf_quant: Q8_0
+  max_model_len: 32768
+  reasoning_parser: qwen3
+
+defaults:
+  warmup_requests: 2
+  measure_requests: 20
+  temperature: 0.0
+  top_p: 1.0
+  port: 8000
+  gpu_memory_utilization: 0.85
+
+engines:
+  vllm:
+    track: A
+    kind: http
+    launch: engines/vllm.sh
+    probe: engines/probes/http_probe.py
+    model_env: VLLM_MODEL
+
+  sglang:
+    track: A
+    kind: http
+    launch: engines/sglang.sh
+    probe: engines/probes/http_probe.py
+    model_env: SGLANG_MODEL
+
+  llama_cpp:
+    track: B
+    kind: http
+    launch: engines/llama.sh
+    probe: engines/probes/http_probe.py
+    port: 8080
+
+  tinygrad:
+    track: B
+    kind: http
+    launch: engines/tinygrad.sh
+    probe: engines/probes/http_probe.py
+    port: 8080
+
+  mirage:
+    track: C
+    kind: megakernel
+    launch: engines/mirage.sh
+    probe: engines/probes/mirage_probe.py
+    repo: https://github.com/mirage-project/mirage
+    branch: mpk
+    demo_model: Qwen/Qwen3-8B
+    target_model: Qwen/Qwen3.6-27B
+    notes: MPK megakernel compiler; Qwen3-8B demo exists, Qwen3.6 GDN port required
+
+  luminal:
+    track: C
+    kind: megakernel
+    launch: engines/luminal.sh
+    probe: engines/probes/import_probe.py
+    import_name: luminal
+    target_model: Qwen/Qwen3.6-27B
+    notes: Megakernel compiler; Llama/Phi examples only, GDN port required
+
+  trtllm:
+    track: A
+    kind: http
+    launch: engines/trtllm.sh
+    probe: engines/probes/http_probe.py
+    notes: Requires FP8 engine build; verify GDN support

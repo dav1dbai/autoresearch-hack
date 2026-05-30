@@ -3,13 +3,15 @@ Triton kernel submissions for a given task.
 
 Karpathy-style keep/discard loop:
   1. Pick a task
-  2. Generate a candidate Triton kernel (via LLM)
+  2. Generate a candidate Triton kernel (via Anthropic API)
   3. Evaluate correctness + speedup
   4. If correct and faster, keep as new best
   5. Repeat
 
 Usage:
     uv run python autoresearch_loop.py <task_path> [--iters 10] [--budget-s 1200]
+
+Requires ANTHROPIC_API_KEY env var.
 """
 from __future__ import annotations
 
@@ -17,11 +19,12 @@ import argparse
 import importlib.util
 import json
 import os
-import subprocess
+import re
 import sys
 import time
 from pathlib import Path
 
+import anthropic
 import torch
 
 
@@ -104,11 +107,12 @@ Reference code:
 {history_section}
 
 Output ONLY a complete Python file defining `ModelNew`. Include all necessary imports.
-Do not include any explanation or markdown — just the Python code."""
+Do not include any explanation or markdown fences — just the raw Python code."""
 
 
 def generate_candidate(task_path: str, history: list[dict], work_dir: Path,
-                       iteration: int, agent_cmd: str) -> Path:
+                       iteration: int, client: anthropic.Anthropic,
+                       model: str = "claude-sonnet-4-20250514") -> Path:
     ref_code = Path(task_path).read_text()
 
     history_lines = []
@@ -129,22 +133,31 @@ def generate_candidate(task_path: str, history: list[dict], work_dir: Path,
 
     prompt = GENERATE_PROMPT.format(reference_code=ref_code, history_section=history_section)
 
-    out_path = work_dir / f"candidate_{iteration}.py"
-    result = subprocess.run(
-        [*agent_cmd.split(), prompt],
-        capture_output=True, text=True, timeout=300,
+    response = client.messages.create(
+        model=model,
+        max_tokens=8192,
+        messages=[{"role": "user", "content": prompt}],
     )
-    code = result.stdout.strip()
+
+    code = response.content[0].text.strip()
+    # Strip markdown fences if present
     if code.startswith("```"):
         lines = code.split("\n")
         code = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+    # Also try to extract from ```python ... ``` blocks
+    m = re.search(r"```python\n(.*?)```", code, re.DOTALL)
+    if m:
+        code = m.group(1).strip()
 
+    out_path = work_dir / f"candidate_{iteration}.py"
     out_path.write_text(code)
     return out_path
 
 
 def autoresearch_loop(task_path: str, max_iters: int = 10, budget_s: int = 1200,
-                      agent_cmd: str = "claude -p --dangerously-skip-permissions"):
+                      model: str = "claude-sonnet-4-20250514"):
+    client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY env var
+
     work_dir = Path("runs") / Path(task_path).stem / time.strftime("%Y%m%d_%H%M%S")
     work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -156,6 +169,7 @@ def autoresearch_loop(task_path: str, max_iters: int = 10, budget_s: int = 1200,
 
     print(f"Task: {task_path}")
     print(f"Work dir: {work_dir}")
+    print(f"Model: {model}")
     print(f"Budget: {max_iters} iters / {budget_s}s wall clock")
     print()
 
@@ -167,7 +181,7 @@ def autoresearch_loop(task_path: str, max_iters: int = 10, budget_s: int = 1200,
         print(f"--- Iteration {i} ---")
 
         try:
-            cand_path = generate_candidate(task_path, history, work_dir, i, agent_cmd)
+            cand_path = generate_candidate(task_path, history, work_dir, i, client, model)
             print(f"  Generated: {cand_path}")
         except Exception as e:
             entry = {"iter": i, "correct": False, "error": f"gen: {e}", "kept": False}
@@ -216,8 +230,8 @@ if __name__ == "__main__":
     parser.add_argument("task", help="Path to KernelBench task")
     parser.add_argument("--iters", type=int, default=10)
     parser.add_argument("--budget-s", type=int, default=1200)
-    parser.add_argument("--agent-cmd", default="claude -p --dangerously-skip-permissions")
+    parser.add_argument("--model", default="claude-sonnet-4-20250514")
     args = parser.parse_args()
 
-    result = autoresearch_loop(args.task, args.iters, args.budget_s, args.agent_cmd)
+    result = autoresearch_loop(args.task, args.iters, args.budget_s, args.model)
     print(json.dumps(result, indent=2))

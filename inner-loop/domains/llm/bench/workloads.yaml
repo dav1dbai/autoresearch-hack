@@ -1,0 +1,54 @@
+prompts:
+  system: "You are a helpful assistant. Reply concisely."
+  long_prefill: |
+    Summarize the following text in three bullet points. The text discusses distributed systems,
+    consensus algorithms, replication, fault tolerance, leader election, and practical tradeoffs
+    in production databases and message queues. Consider latency, throughput, consistency models,
+    CAP theorem implications, operational complexity, and recovery procedures after network
+    partitions and node failures. Include examples from real deployments and mention when strong
+    consistency is worth the cost versus when eventual consistency is acceptable for user-facing
+    products. Also discuss observability, backpressure, idempotency, and how inference serving
+    systems batch requests to keep GPUs saturated without violating tail latency SLOs.
+  short_user: "Explain gradient descent in two sentences."
+  shared_prefix: |
+    You are an expert coding assistant. Follow these rules: write minimal correct code, prefer
+    standard library, add tests when asked, explain tradeoffs briefly, never invent APIs, ask
+    clarifying questions when requirements are ambiguous, optimize for readability first, use type
+    hints in Python, handle errors explicitly, avoid global state, prefer composition over
+    inheritance, document non-obvious invariants, and keep functions small. You help with debugging,
+    refactors, performance work, and system design. When suggesting changes, show diffs and note
+    risks. Default to safe incremental steps unless the user requests a rewrite.
+  user_turn: "Write a Python function that returns the nth Fibonacci number iteratively."
+
+workloads:
+  A_long_prefill:
+    description: "4096-token prefill stress (approximated via long prompt), 128 output tokens"
+    prompt_key: long_prefill
+    max_tokens: 128
+    concurrency: [1, 4, 8]
+
+  B_long_decode:
+    description: "512-token prefill (short), 512 output tokens"
+    prompt_key: short_user
+    max_tokens: 512
+    concurrency: [1, 4, 8]
+
+  C_shared_prefix:
+    description: "Shared system prefix with distinct user turns"
+    system_key: shared_prefix
+    prompt_key: user_turn
+    max_tokens: 256
+    concurrency: [8, 16]
+
+  D_batch1_decode:
+    description: "Monokernel-friendly batch-1 decode"
+    prompt_key: short_user
+    max_tokens: 512
+    concurrency: [1]
+
+  E_jit_warmup:
+    description: "Cold start then 10 tokens for JIT/compile stacks"
+    prompt_key: short_user
+    max_tokens: 10
+    concurrency: [1]
+    include_startup: true

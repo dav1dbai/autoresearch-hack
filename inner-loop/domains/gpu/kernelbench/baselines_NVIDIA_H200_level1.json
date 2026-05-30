@@ -1,0 +1,606 @@
+{
+  "gpu": "NVIDIA H200",
+  "torch": "2.6.0+cu124",
+  "results": {
+    "100_HingeLoss": {
+      "median_ms": 8.0751,
+      "mean_ms": 8.0745,
+      "min_ms": 8.0658,
+      "max_ms": 8.0797
+    },
+    "10_3D_tensor_matrix_multiplication": {
+      "median_ms": 1.0527,
+      "mean_ms": 1.0527,
+      "min_ms": 1.0483,
+      "max_ms": 1.0585
+    },
+    "11_4D_tensor_matrix_multiplication": {
+      "median_ms": 10.4479,
+      "mean_ms": 10.4238,
+      "min_ms": 10.1345,
+      "max_ms": 10.594
+    },
+    "12_Matmul_with_diagonal_matrices_": {
+      "median_ms": 0.0625,
+      "mean_ms": 0.0625,
+      "min_ms": 0.0614,
+      "max_ms": 0.0658
+    },
+    "13_Matmul_for_symmetric_matrices": {
+      "median_ms": 2.6978,
+      "mean_ms": 2.6979,
+      "min_ms": 2.6945,
+      "max_ms": 2.7042
+    },
+    "14_Matmul_for_upper_triangular_matrices": {
+      "median_ms": 2.7415,
+      "mean_ms": 2.7429,
+      "min_ms": 2.7395,
+      "max_ms": 2.7516
+    },
+    "15_Matmul_for_lower_triangular_matrices": {
+      "median_ms": 2.7428,
+      "mean_ms": 2.7436,
+      "min_ms": 2.7404,
+      "max_ms": 2.7508
+    },
+    "16_Matmul_with_transposed_A": {
+      "median_ms": 2.6275,
+      "mean_ms": 2.6279,
+      "min_ms": 2.6266,
+      "max_ms": 2.6332
+    },
+    "17_Matmul_with_transposed_B": {
+      "median_ms": 2.7349,
+      "mean_ms": 2.7321,
+      "min_ms": 2.7246,
+      "max_ms": 2.7433
+    },
+    "18_Matmul_with_transposed_both": {
+      "median_ms": 2.7817,
+      "mean_ms": 2.781,
+      "min_ms": 2.7734,
+      "max_ms": 2.7882
+    },
+    "19_ReLU": {
+      "median_ms": 3.0128,
+      "mean_ms": 3.0127,
+      "min_ms": 3.0107,
+      "max_ms": 3.0154
+    },
+    "1_Square_matrix_multiplication_": {
+      "median_ms": 2.7017,
+      "mean_ms": 2.7012,
+      "min_ms": 2.6959,
+      "max_ms": 2.7086
+    },
+    "20_LeakyReLU": {
+      "median_ms": 3.0166,
+      "mean_ms": 3.0168,
+      "min_ms": 3.0129,
+      "max_ms": 3.0204
+    },
+    "21_Sigmoid": {
+      "median_ms": 3.0116,
+      "mean_ms": 3.0121,
+      "min_ms": 3.0093,
+      "max_ms": 3.0169
+    },
+    "22_Tanh": {
+      "median_ms": 3.0499,
+      "mean_ms": 3.0504,
+      "min_ms": 3.0478,
+      "max_ms": 3.0552
+    },
+    "23_Softmax": {
+      "median_ms": 7.1346,
+      "mean_ms": 7.1393,
+      "min_ms": 7.1268,
+      "max_ms": 7.1576
+    },
+    "24_LogSoftmax": {
+      "median_ms": 6.2929,
+      "mean_ms": 6.2927,
+      "min_ms": 6.2777,
+      "max_ms": 6.3108
+    },
+    "25_Swish": {
+      "median_ms": 7.4281,
+      "mean_ms": 7.4284,
+      "min_ms": 7.4241,
+      "max_ms": 7.4327
+    },
+    "26_GELU_": {
+      "median_ms": 3.0141,
+      "mean_ms": 3.014,
+      "min_ms": 3.012,
+      "max_ms": 3.0172
+    },
+    "27_SELU_": {
+      "median_ms": 3.011,
+      "mean_ms": 3.0119,
+      "min_ms": 3.0081,
+      "max_ms": 3.0209
+    },
+    "28_HardSigmoid": {
+      "median_ms": 3.0156,
+      "mean_ms": 3.0151,
+      "min_ms": 3.0101,
+      "max_ms": 3.0183
+    },
+    "29_Softplus": {
+      "median_ms": 3.5617,
+      "mean_ms": 3.5621,
+      "min_ms": 3.5593,
+      "max_ms": 3.5702
+    },
+    "2_Standard_matrix_multiplication_": {
+      "median_ms": 2.674,
+      "mean_ms": 2.6745,
+      "min_ms": 2.6712,
+      "max_ms": 2.6811
+    },
+    "30_Softsign": {
+      "median_ms": 10.4165,
+      "mean_ms": 10.4152,
+      "min_ms": 10.4096,
+      "max_ms": 10.4218
+    },
+    "31_ELU": {
+      "median_ms": 3.0105,
+      "mean_ms": 3.011,
+      "min_ms": 3.0092,
+      "max_ms": 3.0167
+    },
+    "32_HardTanh": {
+      "median_ms": 3.0154,
+      "mean_ms": 3.0163,
+      "min_ms": 3.0113,
+      "max_ms": 3.0273
+    },
+    "33_BatchNorm": {
+      "median_ms": 2.9155,
+      "mean_ms": 2.9162,
+      "min_ms": 2.9135,
+      "max_ms": 2.9236
+    },
+    "34_InstanceNorm": {
+      "median_ms": 8.254,
+      "mean_ms": 8.255,
+      "min_ms": 8.2517,
+      "max_ms": 8.2626
+    },
+    "35_GroupNorm_": {
+      "median_ms": 9.1027,
+      "mean_ms": 9.1027,
+      "min_ms": 9.0978,
+      "max_ms": 9.1073
+    },
+    "36_RMSNorm_": {
+      "median_ms": 11.3891,
+      "mean_ms": 11.4018,
+      "min_ms": 11.3847,
+      "max_ms": 11.4754
+    },
+    "37_FrobeniusNorm_": {
+      "median_ms": 7.0931,
+      "mean_ms": 7.0932,
+      "min_ms": 7.0896,
+      "max_ms": 7.0992
+    },
+    "38_L1Norm_": {
+      "median_ms": 12.4199,
+      "mean_ms": 12.4205,
+      "min_ms": 12.4153,
+      "max_ms": 12.4271
+    },
+    "39_L2Norm_": {
+      "median_ms": 8.4036,
+      "mean_ms": 8.4031,
+      "min_ms": 8.3989,
+      "max_ms": 8.4081
+    },
+    "3_Batched_matrix_multiplication": {
+      "median_ms": 5.3436,
+      "mean_ms": 5.3446,
+      "min_ms": 5.3412,
+      "max_ms": 5.352
+    },
+    "40_LayerNorm": {
+      "median_ms": 8.3707,
+      "mean_ms": 8.37,
+      "min_ms": 8.3595,
+      "max_ms": 8.3807
+    },
+    "41_Max_Pooling_1D": {
+      "median_ms": 10.6804,
+      "mean_ms": 10.6857,
+      "min_ms": 10.6706,
+      "max_ms": 10.7348
+    },
+    "42_Max_Pooling_2D": {
+      "median_ms": 10.7425,
+      "mean_ms": 10.742,
+      "min_ms": 10.7362,
+      "max_ms": 10.7484
+    },
+    "43_Max_Pooling_3D": {
+      "median_ms": 3.9153,
+      "mean_ms": 3.9156,
+      "min_ms": 3.9135,
+      "max_ms": 3.9211
+    },
+    "44_Average_Pooling_1D": {
+      "median_ms": 8.0097,
+      "mean_ms": 8.0111,
+      "min_ms": 8.0083,
+      "max_ms": 8.0186
+    },
+    "45_Average_Pooling_2D": {
+      "median_ms": 4.5746,
+      "mean_ms": 4.5732,
+      "min_ms": 4.5644,
+      "max_ms": 4.5801
+    },
+    "46_Average_Pooling_3D": {
+      "median_ms": 8.5916,
+      "mean_ms": 8.5942,
+      "min_ms": 8.5902,
+      "max_ms": 8.6089
+    },
+    "47_Sum_reduction_over_a_dimension": {
+      "median_ms": 2.1004,
+      "mean_ms": 2.0971,
+      "min_ms": 2.0547,
+      "max_ms": 2.1337
+    },
+    "48_Mean_reduction_over_a_dimension": {
+      "median_ms": 2.0986,
+      "mean_ms": 2.1006,
+      "min_ms": 2.0769,
+      "max_ms": 2.1346
+    },
+    "49_Max_reduction_over_a_dimension": {
+      "median_ms": 2.714,
+      "mean_ms": 2.7144,
+      "min_ms": 2.7112,
+      "max_ms": 2.7191
+    },
+    "4_Matrix_vector_multiplication_": {
+      "median_ms": 2.31,
+      "mean_ms": 2.3101,
+      "min_ms": 2.3084,
+      "max_ms": 2.314
+    },
+    "50_conv_standard_2D__square_input__square_kernel": {
+      "median_ms": 2.0782,
+      "mean_ms": 2.0882,
+      "min_ms": 2.0742,
+      "max_ms": 2.1129
+    },
+    "51_Argmax_over_a_dimension": {
+      "median_ms": 2.7086,
+      "mean_ms": 2.7094,
+      "min_ms": 2.7072,
+      "max_ms": 2.7161
+    },
+    "52_Argmin_over_a_dimension": {
+      "median_ms": 2.7084,
+      "mean_ms": 2.7085,
+      "min_ms": 2.705,
+      "max_ms": 2.7137
+    },
+    "53_Min_reduction_over_a_dimension": {
+      "median_ms": 2.7158,
+      "mean_ms": 2.7165,
+      "min_ms": 2.7124,
+      "max_ms": 2.7227
+    },
+    "54_conv_standard_3D__square_input__square_kernel": {
+      "median_ms": 1.3603,
+      "mean_ms": 1.3605,
+      "min_ms": 1.3585,
+      "max_ms": 1.3662
+    },
+    "55_conv_standard_2D__asymmetric_input__square_kernel": {
+      "median_ms": 3.872,
+      "mean_ms": 3.8708,
+      "min_ms": 3.8523,
+      "max_ms": 3.88
+    },
+    "56_conv_standard_2D__asymmetric_input__asymmetric_kernel": {
+      "median_ms": 3.2642,
+      "mean_ms": 3.265,
+      "min_ms": 3.2628,
+      "max_ms": 3.2721
+    },
+    "57_conv_transposed_2D__square_input__square_kernel": {
+      "median_ms": 5.3889,
+      "mean_ms": 5.3752,
+      "min_ms": 5.3431,
+      "max_ms": 5.3993
+    },
+    "58_conv_transposed_3D__asymmetric_input__asymmetric_kernel": {
+      "median_ms": 2.4405,
+      "mean_ms": 2.4415,
+      "min_ms": 2.4251,
+      "max_ms": 2.4684
+    },
+    "59_conv_standard_3D__asymmetric_input__square_kernel": {
+      "median_ms": 2.0335,
+      "mean_ms": 2.0343,
+      "min_ms": 2.0298,
+      "max_ms": 2.0464
+    },
+    "5_Matrix_scalar_multiplication": {
+      "median_ms": 2.0273,
+      "mean_ms": 2.0269,
+      "min_ms": 2.025,
+      "max_ms": 2.0291
+    },
+    "60_conv_standard_3D__square_input__asymmetric_kernel": {
+      "median_ms": 5.3064,
+      "mean_ms": 5.3058,
+      "min_ms": 5.2977,
+      "max_ms": 5.3119
+    },
+    "61_conv_transposed_3D__square_input__square_kernel": {
+      "median_ms": 4.6857,
+      "mean_ms": 4.6842,
+      "min_ms": 4.6661,
+      "max_ms": 4.6994
+    },
+    "62_conv_standard_2D__square_input__asymmetric_kernel": {
+      "median_ms": 3.4952,
+      "mean_ms": 3.4953,
+      "min_ms": 3.4911,
+      "max_ms": 3.4996
+    },
+    "63_conv_standard_2D__square_input__square_kernel": {
+      "median_ms": 6.5975,
+      "mean_ms": 6.5636,
+      "min_ms": 6.462,
+      "max_ms": 6.6882
+    },
+    "64_conv_transposed_1D": {
+      "median_ms": 4.215,
+      "mean_ms": 4.2175,
+      "min_ms": 4.1983,
+      "max_ms": 4.2444
+    },
+    "65_conv_transposed_2D__square_input__asymmetric_kernel": {
+      "median_ms": 2.209,
+      "mean_ms": 2.2032,
+      "min_ms": 2.1755,
+      "max_ms": 2.2222
+    },
+    "66_conv_standard_3D__asymmetric_input__asymmetric_kernel": {
+      "median_ms": 2.616,
+      "mean_ms": 2.6174,
+      "min_ms": 2.6148,
+      "max_ms": 2.622
+    },
+    "67_conv_standard_1D": {
+      "median_ms": 2.3084,
+      "mean_ms": 2.3089,
+      "min_ms": 2.3065,
+      "max_ms": 2.314
+    },
+    "68_conv_transposed_3D__square_input__asymmetric_kernel": {
+      "median_ms": 8.5056,
+      "mean_ms": 8.5008,
+      "min_ms": 8.4841,
+      "max_ms": 8.5141
+    },
+    "69_conv_transposed_2D__asymmetric_input__asymmetric_kernel": {
+      "median_ms": 2.4361,
+      "mean_ms": 2.436,
+      "min_ms": 2.434,
+      "max_ms": 2.4384
+    },
+    "6_Matmul_with_large_K_dimension_": {
+      "median_ms": 1.32,
+      "mean_ms": 1.3207,
+      "min_ms": 1.3173,
+      "max_ms": 1.3251
+    },
+    "70_conv_transposed_3D__asymmetric_input__square_kernel": {
+      "median_ms": 8.808,
+      "mean_ms": 8.8078,
+      "min_ms": 8.7993,
+      "max_ms": 8.8182
+    },
+    "71_conv_transposed_2D__asymmetric_input__square_kernel": {
+      "median_ms": 1.3256,
+      "mean_ms": 1.327,
+      "min_ms": 1.319,
+      "max_ms": 1.3353
+    },
+    "72_conv_transposed_3D_asymmetric_input_asymmetric_kernel___strided_padded_grouped_": {
+      "median_ms": 2.5111,
+      "mean_ms": 2.5092,
+      "min_ms": 2.5023,
+      "max_ms": 2.5165
+    },
+    "73_conv_transposed_3D_asymmetric_input_square_kernel__strided_padded__grouped": {
+      "median_ms": 1.7662,
+      "mean_ms": 1.7647,
+      "min_ms": 1.7546,
+      "max_ms": 1.7731
+    },
+    "74_conv_transposed_1D_dilated": {
+      "median_ms": 1.5172,
+      "mean_ms": 1.5257,
+      "min_ms": 1.5125,
+      "max_ms": 1.566
+    },
+    "75_conv_transposed_2D_asymmetric_input_asymmetric_kernel_strided__grouped____padded____dilated__": {
+      "median_ms": 5.7707,
+      "mean_ms": 5.7698,
+      "min_ms": 5.7572,
+      "max_ms": 5.7809
+    },
+    "76_conv_standard_1D_dilated_strided__": {
+      "median_ms": 9.8824,
+      "mean_ms": 9.8938,
+      "min_ms": 9.8673,
+      "max_ms": 9.9352
+    },
+    "77_conv_transposed_3D_square_input_square_kernel___padded____dilated____strided__": {
+      "median_ms": 1.9633,
+      "mean_ms": 1.966,
+      "min_ms": 1.9351,
+      "max_ms": 1.9879
+    },
+    "78_conv_transposed_2D_asymmetric_input_asymmetric_kernel___padded__": {
+      "median_ms": 2.0416,
+      "mean_ms": 2.0422,
+      "min_ms": 2.0355,
+      "max_ms": 2.0495
+    },
+    "79_conv_transposed_1D_asymmetric_input_square_kernel___padded____strided____dilated__": {
+      "median_ms": 1.5857,
+      "mean_ms": 1.5828,
+      "min_ms": 1.5757,
+      "max_ms": 1.5885
+    },
+    "7_Matmul_with_small_K_dimension_": {
+      "median_ms": 4.0831,
+      "mean_ms": 4.0839,
+      "min_ms": 4.0816,
+      "max_ms": 4.0949
+    },
+    "80_conv_standard_2D_square_input_asymmetric_kernel___dilated____padded__": {
+      "median_ms": 3.441,
+      "mean_ms": 3.4437,
+      "min_ms": 3.4389,
+      "max_ms": 3.4612
+    },
+    "81_conv_transposed_2D_asymmetric_input_square_kernel___dilated____padded____strided__": {
+      "median_ms": 1.6089,
+      "mean_ms": 1.6124,
+      "min_ms": 1.6057,
+      "max_ms": 1.6366
+    },
+    "82_conv_depthwise_2D_square_input_square_kernel": {
+      "median_ms": 2.5413,
+      "mean_ms": 2.5419,
+      "min_ms": 2.5406,
+      "max_ms": 2.5456
+    },
+    "83_conv_depthwise_2D_square_input_asymmetric_kernel": {
+      "median_ms": 1.4664,
+      "mean_ms": 1.4668,
+      "min_ms": 1.4652,
+      "max_ms": 1.4716
+    },
+    "84_conv_depthwise_2D_asymmetric_input_square_kernel": {
+      "median_ms": 10.096,
+      "mean_ms": 10.0948,
+      "min_ms": 10.0889,
+      "max_ms": 10.0979
+    },
+    "85_conv_depthwise_2D_asymmetric_input_asymmetric_kernel": {
+      "median_ms": 2.2986,
+      "mean_ms": 2.2991,
+      "min_ms": 2.2976,
+      "max_ms": 2.3041
+    },
+    "86_conv_depthwise_separable_2D": {
+      "median_ms": 3.3935,
+      "mean_ms": 3.394,
+      "min_ms": 3.3923,
+      "max_ms": 3.3987
+    },
+    "87_conv_pointwise_2D": {
+      "median_ms": 4.1653,
+      "mean_ms": 4.1626,
+      "min_ms": 4.1543,
+      "max_ms": 4.1686
+    },
+    "88_MinGPTNewGelu": {
+      "median_ms": 1.1528,
+      "mean_ms": 1.1524,
+      "min_ms": 1.1495,
+      "max_ms": 1.1564
+    },
+    "89_cumsum": {
+      "median_ms": 4.4691,
+      "mean_ms": 4.47,
+      "min_ms": 4.4636,
+      "max_ms": 4.4842
+    },
+    "8_Matmul_with_irregular_shapes_": {
+      "median_ms": 6.4712,
+      "mean_ms": 6.47,
+      "min_ms": 6.4611,
+      "max_ms": 6.476
+    },
+    "90_cumprod": {
+      "median_ms": 4.4694,
+      "mean_ms": 4.469,
+      "min_ms": 4.4648,
+      "max_ms": 4.474
+    },
+    "91_cumsum_reverse": {
+      "median_ms": 10.2472,
+      "mean_ms": 10.2476,
+      "min_ms": 10.2412,
+      "max_ms": 10.2584
+    },
+    "92_cumsum_exclusive": {
+      "median_ms": 10.9174,
+      "mean_ms": 10.9204,
+      "min_ms": 10.9031,
+      "max_ms": 10.9733
+    },
+    "93_masked_cumsum": {
+      "median_ms": 8.1337,
+      "mean_ms": 8.1335,
+      "min_ms": 8.1299,
+      "max_ms": 8.1365
+    },
+    "94_MSELoss": {
+      "median_ms": 5.9289,
+      "mean_ms": 5.929,
+      "min_ms": 5.9266,
+      "max_ms": 5.9344
+    },
+    "95_CrossEntropyLoss": {
+      "median_ms": 1.4067,
+      "mean_ms": 1.4067,
+      "min_ms": 1.3999,
+      "max_ms": 1.4148
+    },
+    "96_HuberLoss": {
+      "median_ms": 3.918,
+      "mean_ms": 3.919,
+      "min_ms": 3.9158,
+      "max_ms": 3.9315
+    },
+    "97_ScaledDotProductAttention": {
+      "median_ms": 25.2327,
+      "mean_ms": 25.228,
+      "min_ms": 25.0551,
+      "max_ms": 25.403
+    },
+    "98_KLDivLoss": {
+      "median_ms": 2.7478,
+      "mean_ms": 2.7479,
+      "min_ms": 2.7459,
+      "max_ms": 2.7512
+    },
+    "99_TripletMarginLoss": {
+      "median_ms": 3.0676,
+      "mean_ms": 3.0682,
+      "min_ms": 3.0644,
+      "max_ms": 3.0736
+    },
+    "9_Tall_skinny_matrix_multiplication_": {
+      "median_ms": 2.6018,
+      "mean_ms": 2.6011,
+      "min_ms": 2.5976,
+      "max_ms": 2.6061
+    }
+  }
+}
