@@ -8,7 +8,7 @@
 #
 # Usage:
 #     scripts/modal_cuda_oxide.sh                 # defaults: reduction, K=3
-#     K=5 BUDGET=180 AR2_CUDA_OXIDE_KERNELS=reduction scripts/modal_cuda_oxide.sh
+#     K=5 BUDGET=300 AR2_CUDA_OXIDE_KERNELS=reduction scripts/modal_cuda_oxide.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,9 +19,9 @@ export $(grep -E '^(MODAL_(PROFILE|TOKEN_ID|TOKEN_SECRET)|OPENAI_API_KEY)=' .env
 
 export AR2_BACKEND=modal
 export AR2_CUDA_OXIDE_KERNELS="${AR2_CUDA_OXIDE_KERNELS:-reduction}"  # scope to one kernel
-export AR2_STALE_ITERS="${AR2_STALE_ITERS:-4}"
+export AR2_STALE_ITERS="${AR2_STALE_ITERS:-6}"
 
-K="${K:-3}"; BUDGET="${BUDGET:-180}"
+K="${K:-3}"; BUDGET="${BUDGET:-300}"
 echo "modal cuda-oxide: kernels=$AR2_CUDA_OXIDE_KERNELS K=$K budget=${BUDGET}s"
 exec caffeinate -i .venv/bin/python -u -m harness --cuda-oxide \
   -K "$K" --budget-seconds "$BUDGET" --no-workshop "$@"

@@ -65,6 +65,8 @@ _MUTATE_AGENT_DEFAULT = _raindrop_codex_default()
 _MAX_ITERS_PER_SECOND = 1.0 / 30.0  # ~2 per minute; cap at budget.wall_seconds * factor
 _REWARD_CEILING = float(os.environ.get("AR2_REWARD_CEILING", "0.999"))
 _STALE_ITERS = int(os.environ.get("AR2_STALE_ITERS", "2"))
+_SOLVE_AGENT_TIMEOUT_FRACTION = float(os.environ.get("AR2_SOLVE_AGENT_TIMEOUT_FRACTION", "0.95"))
+_IMPROVE_AGENT_TIMEOUT_FRACTION = float(os.environ.get("AR2_IMPROVE_AGENT_TIMEOUT_FRACTION", "0.95"))
 _AGENT_LOG = "agent.log"
 
 
@@ -150,7 +152,7 @@ def solve(
             prompt = _build_solve_prompt(task, best_result, iteration)
 
             try:
-                _run_agent(cmd, prompt, cwd=task.workdir, timeout=remaining * 0.8)
+                _run_agent(cmd, prompt, cwd=task.workdir, timeout=remaining * _SOLVE_AGENT_TIMEOUT_FRACTION)
             except subprocess.TimeoutExpired:
                 break
 
@@ -201,7 +203,7 @@ def improve(
     (version_root / "improve_prompt.md").write_text(prompt, encoding="utf-8")
 
     try:
-        _run_agent(cmd, prompt, cwd=version_root, timeout=remaining * 0.9)
+        _run_agent(cmd, prompt, cwd=version_root, timeout=remaining * _IMPROVE_AGENT_TIMEOUT_FRACTION)
     except subprocess.TimeoutExpired:
         pass
 

@@ -256,6 +256,36 @@ class TestSolveBudget:
 
         assert sub.workdir == task.workdir
 
+    def test_solve_uses_configured_agent_timeout_fraction(self, task: TaskSpec, workdir: Path):
+        """Agent timeout leaves only a small harness cleanup margin by default."""
+        budget = Budget(wall_seconds=10.0)
+        captured: list[float | None] = []
+
+        calls = [0]
+
+        def score(sub: Submission) -> StepResult:
+            calls[0] += 1
+            return StepResult(reward=0.5, done=calls[0] > 1)
+
+        def agent(cmd, prompt, cwd=None, timeout=None):
+            captured.append(timeout)
+
+        import ar.entrypoint as ep
+        orig_iters = ep._MAX_ITERS_PER_SECOND
+        orig_fraction = ep._SOLVE_AGENT_TIMEOUT_FRACTION
+        ep._MAX_ITERS_PER_SECOND = 1.0
+        ep._SOLVE_AGENT_TIMEOUT_FRACTION = 0.5
+        try:
+            with patch("ar.entrypoint._run_agent", side_effect=agent):
+                ep.solve(task, budget, score, noop_spawn)
+        finally:
+            ep._MAX_ITERS_PER_SECOND = orig_iters
+            ep._SOLVE_AGENT_TIMEOUT_FRACTION = orig_fraction
+
+        assert captured
+        assert captured[0] is not None
+        assert captured[0] == pytest.approx(5.0, abs=0.5)
+
 
 # ---------------------------------------------------------------------------
 # improve() — new dir, distinct from source, archive fed to prompt
@@ -289,6 +319,27 @@ class TestImprove:
             assert (result / "harness" / "runtime" / "score.py").exists()
         finally:
             shutil.rmtree(result, ignore_errors=True)
+
+    def test_improve_uses_configured_agent_timeout_fraction(self):
+        import ar.entrypoint as ep
+
+        archive = Archive()
+        budget = Budget(wall_seconds=20.0)
+        captured: list[float | None] = []
+
+        def agent(cmd, prompt, cwd=None, timeout=None):
+            captured.append(timeout)
+
+        orig_fraction = ep._IMPROVE_AGENT_TIMEOUT_FRACTION
+        ep._IMPROVE_AGENT_TIMEOUT_FRACTION = 0.5
+        try:
+            with patch("ar.entrypoint._run_agent", side_effect=agent):
+                result = ep.improve(archive, budget, noop_spawn)
+        finally:
+            ep._IMPROVE_AGENT_TIMEOUT_FRACTION = orig_fraction
+
+        shutil.rmtree(result, ignore_errors=True)
+        assert captured == [pytest.approx(10.0)]
 
     def test_new_dir_is_copy_of_ar(self, tmp_path: Path):
         """The returned directory is a copy of the ar/ folder."""
