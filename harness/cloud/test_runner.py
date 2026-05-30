@@ -19,6 +19,16 @@ from harness.contracts import Budget, Rollout
 
 
 class TestModalFanOut:
+    def test_workshop_trace_ids_are_valid_hex(self, monkeypatch):
+        mr = _fresh_modal_runner(monkeypatch)
+
+        trace_id = mr._new_workshop_trace_id()
+
+        assert len(trace_id) == 32
+        assert mr._valid_workshop_trace_id(trace_id) == trace_id
+        with pytest.raises(ValueError):
+            mr._valid_workshop_trace_id("raindrop-k1-mcp")
+
     def test_score_repo_modal_calls_starmap(self, tmp_path, monkeypatch):
         monkeypatch.setenv("AR2_BACKEND", "modal")
         monkeypatch.setenv("MODAL_PROFILE", "autoresearch-hack")

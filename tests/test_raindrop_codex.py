@@ -91,6 +91,7 @@ def test_live_events_include_run_id_metadata(monkeypatch: pytest.MonkeyPatch) ->
 
     assert captured[0][0] == "/v1/live"
     metadata = captured[0][1]["metadata"]
+    assert metadata["workshopRunId"] == "trace-1"
     assert metadata["runId"] == "raindrop-k2"
     assert metadata["ar2.run_id"] == "raindrop-k2"
     assert metadata["ok"] is True

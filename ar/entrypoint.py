@@ -263,14 +263,25 @@ Make your edit and stop — the harness scores and keeps/reverts automatically.
 def _build_improve_prompt(archive: Archive, version_root: Path) -> str:
     context = _minimal_improve_context(archive)
     run_id = os.environ.get("AR2_RUN_ID", "").strip()
+    workshop_run_id = os.environ.get("RAINDROP_WORKSHOP_TRACE_ID", "").strip()
+    workshop_lookup = (
+        f"Pass `{workshop_run_id}` as the Workshop `run_id` when a Raindrop MCP tool requires one."
+        if workshop_run_id
+        else "If a Raindrop MCP tool requires a Workshop `run_id`, first use "
+        "`raindrop.query_traces` to find the concrete run id for this AR2 tag."
+    )
     run_scope = (
         f"""
 Current AR2_RUN_ID: `{run_id}`
+Workshop run id for this improve invocation: `{workshop_run_id or "(not set)"}`
 
 Only inspect Workshop rows/events where metadata or OTLP attributes contain this
-exact run id (`runId` or `ar2.run_id`). Ignore traces from other run ids. Before
-editing, identify which same-run traces you inspected and what evidence they
-provided."""
+exact AR2 run tag (`runId` or `ar2.run_id`). Ignore traces from other run tags.
+`AR2_RUN_ID` is a harness tag, not the Workshop run id; do not pass it as the
+`run_id` argument to `get_run_outline` or `search_run`.
+{workshop_lookup}
+Before editing, identify which same-run traces you inspected and what evidence
+they provided."""
         if run_id
         else """
 No AR2_RUN_ID is set for this improve step; use Workshop traces that clearly

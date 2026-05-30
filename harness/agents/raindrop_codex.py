@@ -201,6 +201,7 @@ def _live(
     live_metadata = {
         "eventName": "codex improve",
         "provider": "codex",
+        "workshopRunId": trace_id,
         **(metadata or {}),
     }
     if run_id:

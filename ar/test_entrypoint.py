@@ -361,12 +361,16 @@ class TestImprove:
         import ar.entrypoint as ep
 
         monkeypatch.setenv("AR2_RUN_ID", "raindrop-k2")
+        monkeypatch.setenv("RAINDROP_WORKSHOP_TRACE_ID", "0123456789abcdef0123456789abcdef")
         prompt = ep._build_improve_prompt(Archive(), Path("/tmp/version-root"))
 
         assert "Current AR2_RUN_ID: `raindrop-k2`" in prompt
+        assert "Workshop run id for this improve invocation: `0123456789abcdef0123456789abcdef`" in prompt
         assert "metadata or OTLP attributes contain this" in prompt
         assert "`runId` or `ar2.run_id`" in prompt
-        assert "Ignore traces from other run ids" in prompt
+        assert "`AR2_RUN_ID` is a harness tag, not the Workshop run id" in prompt
+        assert "Pass `0123456789abcdef0123456789abcdef` as the Workshop `run_id`" in prompt
+        assert "Ignore traces from other run tags" in prompt
         assert "identify which same-run traces you inspected" in prompt
 
     def test_empty_archive_no_crash(self):

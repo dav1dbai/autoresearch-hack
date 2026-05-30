@@ -40,6 +40,7 @@ solve() call ensures containers see the latest committed snapshot.
 from __future__ import annotations
 
 import importlib.util
+import re
 import traceback
 import uuid
 from pathlib import Path
@@ -69,6 +70,17 @@ def _snapshot_volume() -> modal.Volume:
 from infra.modal.images import app, sandbox_image  # noqa: E402  — shared app with gpu_backend
 
 _MAX_CONTAINERS = 32  # hard ceiling; Modal will schedule up to this many in parallel
+_TRACE_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+
+
+def _new_workshop_trace_id() -> str:
+    return uuid.uuid4().hex
+
+
+def _valid_workshop_trace_id(value: str) -> str:
+    if not _TRACE_ID_RE.fullmatch(value):
+        raise ValueError("Workshop trace ids must be 32 lowercase hex characters")
+    return value
 
 
 @app.function(
@@ -335,6 +347,11 @@ def run_improve(payload: dict) -> dict:
         os.environ["AR2_RUN_ID"] = run_id
     else:
         os.environ.pop("AR2_RUN_ID", None)
+    workshop_trace_id = str(payload.get("workshop_trace_id") or "").strip()
+    if workshop_trace_id:
+        os.environ["RAINDROP_WORKSHOP_TRACE_ID"] = _valid_workshop_trace_id(workshop_trace_id)
+    else:
+        os.environ.pop("RAINDROP_WORKSHOP_TRACE_ID", None)
 
     cache = Path("/tmp/ar2_cache")
     cache.mkdir(parents=True, exist_ok=True)
@@ -428,6 +445,7 @@ def run_improve_on_modal(
         "workshop_traj": workshop_traj,
         "budget": budget.model_dump(),
         "run_id": os.environ.get("AR2_RUN_ID", ""),
+        "workshop_trace_id": _new_workshop_trace_id(),
     }
     from harness.cloud.session import invoke_run_improve
 
