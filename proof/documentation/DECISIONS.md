@@ -322,5 +322,5 @@ Wire via `envs/pools.py::default_pools()` — used by CLI ([D-09](#d-09-outer-lo
 |------|--------|
 | 2026-05-30 | SSOT rewrite: actionable queue, merged dashboard spec, renumbered IDs, parallel-work rules |
 | 2026-05-30 | D-13: `ARCHITECTURE_DAG.md` approved for mechanical import refactor |
-| 2026-05-30 | D-13 step 7: split `backends/gpu.py` → `local.py`, `modal_gpu.py`, `vast.py` |
+| 2026-05-30 | Reconciled Alex `inner-loop/`: research → `proof/documentation/research/`; removed duplicate KernelBench spike + sol-scraper |
 | 2026-05-30 | Docs moved to `proof/documentation/`; stale `harness/modal/` removed |
