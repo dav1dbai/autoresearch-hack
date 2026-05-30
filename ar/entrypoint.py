@@ -116,8 +116,7 @@ def solve(
 ) -> Submission:
     """Karpathy inner loop: edit task.workdir → score → keep if better → repeat.
 
-    v0 is single-agent and does not call spawn().  Later versions may introduce
-    parallel fanout by using the injected spawn primitive.
+    v0 is single-agent and does not call spawn().
     """
     deadline = time.monotonic() + budget.wall_seconds
     max_iters = max(1, int(budget.wall_seconds * _MAX_ITERS_PER_SECOND))
