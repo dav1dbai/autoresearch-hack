@@ -2,8 +2,7 @@
 
 Date: 2026-05-30
 
-Scope: the domains and benchmark ideas already mentioned in `research/report.md`,
-`research/harness-design.md`, and `research/better-report.md`.
+Scope: the domains and benchmark ideas in `report.md`, `harness-design.md`, and `better-report.md`.
 
 Method: queried the public Prime Intellect Environments Hub API directly, because
 the local `prime` CLI is configured with an unauthorized API key. Also checked

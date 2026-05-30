@@ -1,6 +1,6 @@
 """AR² harness — fixed outer loop (meta-optimizer driver).
 
-Implements evaluate() and drive() from proof/documentation/DESIGN.md §3/§4.
+Implements evaluate() and drive() from proof/DESIGN.md §3/§4.
 All external dependencies (score_repo, load_ar) are injected so the module is
 testable offline without Modal or real agents.
 
@@ -71,9 +71,14 @@ def evaluate(
     Persists inner curves on Attempt (D-03) and merges trace files when present.
     """
     from harness.loop.evaluate import attempt_from_rollouts
+    from harness.runtime.loader import resolve_ar_dir
     from harness.util.progress import progress
 
     candidate = source_ref or str(ar_dir)
+    try:
+        ar_snapshot = resolve_ar_dir(candidate)
+    except FileNotFoundError:
+        ar_snapshot = Path(ar_dir)
     if score_repo is _default_score_repo:
         from harness.runtime.score import evaluate_rollouts
 
@@ -82,17 +87,17 @@ def evaluate(
             f"({len(train)} train + {len(heldout)} heldout envs)"
         )
         train_rolls, heldout_rolls = evaluate_rollouts(
-            ar_dir, train, heldout, budget,
+            ar_snapshot, train, heldout, budget,
             version=version, candidate=candidate,
         )
     else:
         progress(f"evaluate v{version}: train rollouts ({len(train)} envs)")
         train_rolls = score_repo(
-            ar_dir, train, budget, version=version, candidate=candidate,
+            ar_snapshot, train, budget, version=version, candidate=candidate,
         )
         progress(f"evaluate v{version}: heldout rollouts ({len(heldout)} envs)")
         heldout_rolls = score_repo(
-            ar_dir, heldout, budget, version=version, candidate=candidate,
+            ar_snapshot, heldout, budget, version=version, candidate=candidate,
         )
 
     attempt = attempt_from_rollouts(

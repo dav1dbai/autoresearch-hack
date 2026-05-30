@@ -237,8 +237,8 @@ autoresearch-meta/                 # our deliverable repo
 ├── infra/                         # Agent #1 output — Modal images (base + sandbox), proxy
 ├── obs/                           # outer dashboard — curve + lineage tree
 ├── vendor/autoresearch/           # pristine karpathy v0 reference (read-only)
-├── proof/documentation/           # design docs, decisions log, architecture plans
-└── proof/documentation/DESIGN.md  # this file
+├── proof/                         # flat design docs, decisions, research notes
+└── proof/DESIGN.md                # this file
 ```
 
 ---

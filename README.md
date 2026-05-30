@@ -3,26 +3,27 @@
 Evolve the **whole** autoresearch repo (DGM-style), scored on **held-out** verifiable envs.
 The second derivative: optimize how much better each AR *version* is at gaining reward.
 
-**Read [`proof/documentation/DESIGN.md`](proof/documentation/DESIGN.md) for architecture.**
-**[`proof/documentation/DECISIONS.md`](proof/documentation/DECISIONS.md) is the SSOT for what to build next**
+**Read [`proof/DESIGN.md`](proof/DESIGN.md) for architecture.**
+**[`proof/DECISIONS.md`](proof/DECISIONS.md) is the SSOT for what to build next**
 (work queue, locked decisions, acceptance criteria).
 
-See [`proof/documentation/README.md`](proof/documentation/README.md) for the full doc index.
+See [`proof/README.md`](proof/README.md) for the full doc index.
 
 ## Layout
-- `ar/` — ★ MUTABLE. AR v0 (seeded from `karpathy/autoresearch`). The artifact that evolves.
-- `harness/` — IMMUTABLE. Meta-loop driver + runtime. `contracts.py` is the single source of truth.
-  - `loop/` — `drive`, `evaluate`, archive persistence
-  - `runtime/` — `score_repo`, rollout, referee, sandbox
-  - `cloud/` — Modal fan-out + app session (named `cloud/` to avoid shadowing the `modal` SDK)
-  - `backends/` — GPU compute (`local.py`, `modal_gpu.py`, `vast.py`; factory in `gpu.py`)
-  - `tracing/` — telemetry injection + db sync
-- `envs/` — IMMUTABLE to AR. Verifiable envs (the referees).
-- `infra/` — Modal images (`infra/modal/`), Vast pool (`infra/vast/`), push collector.
-- `obs/` — `dashboard.py` renders `report.html` from `archive.jsonl` + `traces.db` (generated at runtime, gitignored).
-- `proof/documentation/` — design docs, decisions log, architecture plans, handoff notes.
-- `versions/` — gitignored AR mutation snapshots (`ar_v_*` dirs from `improve()`).
-- `vendor/autoresearch` — pristine karpathy reference (read-only).
+
+**Mutation boundaries (D-15):** `proof/DECISIONS.md`.
+
+| Zone | Paths |
+|------|--------|
+| **Mutable** (meta-agent each generation) | `ar/`, `harness/runtime/` → `versions/v_*/` |
+| **Integrity kernel** (host CLI only) | `envs/`, `contracts`, `tracing/`, `loop/outer`, `cloud/`, `backends/`, `infra/` |
+
+- `ar/` — `solve` + `improve` policy
+- `harness/` — host driver + `runtime/` (snapshot copy is meta-editable)
+- `envs/` — referees
+- `versions/` — gitignored snapshots (`v_*/ar/`, `v_*/harness/runtime/`)
+- `proof/` — design docs + decisions (SSOT)
+- `vendor/autoresearch` — read-only reference
 
 ## Setup (folder-scoped — never touches global config)
 ```bash

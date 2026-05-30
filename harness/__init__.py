@@ -1,4 +1,4 @@
-"""AR² harness — immutable meta-loop driver (see proof/documentation/DESIGN.md §3).
+"""AR² harness — immutable meta-loop driver (see proof/DESIGN.md §3).
 
 Subpackages:
   loop/     — outer meta-loop (drive, evaluate, archive)

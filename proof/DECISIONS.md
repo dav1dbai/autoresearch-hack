@@ -6,7 +6,7 @@
 |-----|------|
 | **`DECISIONS.md`** (this file) | Locked decisions + actionable work queue |
 | `DESIGN.md` | Architecture narrative & agent roster (reference only; if conflict, this file wins) |
-| `proof/documentation/mockups/` | Visual target for dashboard (reference only) |
+| `proof/` | All project docs (flat); see `proof/README.md` |
 
 **How to use:** pick the next **BLOCKING** or **TODO** item, implement the **Action**, run **Acceptance**. Do not re-litigate items marked **DECIDED** unless you have new evidence.
 
@@ -33,6 +33,7 @@
 | 12 | [D-12](#d-12-env-spec-serialization) | **DEFER** | Formal `EnvSpec` on `BaseEnv` after Modal path stable |
 | 13 | [D-13](#d-13-import-dag-mechanical-refactor) | **DONE** | Mechanical import-layer cleanup per `ARCHITECTURE_DAG.md` steps 1→6 |
 | 14 | [D-14](#d-14-test-colocation) | **DONE** | Colocate unit tests with packages per `ARCHITECTURE_DAG.md` Part B T1→T6 |
+| 15 | [D-15](#d-15-mutation-boundaries-version-snapshots) | **PARTIAL** | Version snapshot = `ar/` + `harness/runtime/`; host drive fixed; eval reload TBD |
 
 ---
 
@@ -99,7 +100,7 @@ Add `harness/evaluate.py::attempt_from_rollouts(...)`; wire from `outer_loop.eva
 **Status:** TODO  
 **Decision:** Hero = **layered inner curves** (qualitative). Headline stat = **ΔS(N)** (quantitative). See [Dashboard & metrics](#dashboard--metrics-decided). Selection stays on final held-out R*; ΔS is the scientific claim.
 
-**Action:** Add `obs/metrics.py` (`inner_slope`, `S`, `delta_S`, seed CI). Rebuild `obs/dashboard.py` from `proof/documentation/mockups/dashboard.html`. `uv run python -m obs.dashboard` produces new panels.
+**Action:** Add `obs/metrics.py` (`inner_slope`, `S`, `delta_S`, seed CI). Rebuild `obs/dashboard.py` per [Dashboard](#dashboard--metrics-decided) below. `uv run python -m obs.dashboard` produces new panels.
 
 **Acceptance:** Report shows layered curves + ΔS bars from persisted rollouts (not synthetic mock data).
 
@@ -199,7 +200,7 @@ Add `harness/evaluate.py::attempt_from_rollouts(...)`; wire from `outer_loop.eva
 
 ## Dashboard & metrics (DECIDED)
 
-Visual reference: `proof/documentation/mockups/dashboard.html`. Implementation spec:
+Implementation spec (inline — HTML mockups removed):
 
 ### Data requirements
 - Per version `N`, seed `s`: held-out curve `R(N,s,t)` for **t = 0..K-1**, **K = 8** (baseline + 7 edits).
@@ -304,6 +305,37 @@ Wire via `envs/pools.py::default_pools()` — used by CLI ([D-09](#d-09-outer-lo
 
 ---
 
+### D-15: Mutation boundaries + version snapshots
+
+**Status:** PARTIAL  
+**Resolves:** DESIGN §1 (“whole repo evolves”) vs §2 (“harness immutable”) — **DECISIONS wins.**
+
+**Three zones:**
+
+| Zone | Paths | Who edits | Role |
+|------|-------|-----------|------|
+| **Integrity kernel** | `envs/`, `harness/contracts.py`, `harness/tracing/`, `harness/loop/outer.py` (host `drive`), `harness/cloud/`, `harness/backends/`, `infra/` | Humans / host CLI only | Referee, obs injection, transport, selection driver — agent never touches |
+| **Mutable autoresearch** | `ar/` (solve + improve policy), `harness/runtime/` (rollout orchestration) | Meta-agent per generation | What AR² optimizes — copied into `versions/v_*/` each `improve()` |
+| **Obs / science** | `obs/`, Raindrop OTLP | Harness writes | Metrics + dashboard; not part of candidate |
+
+**Version snapshot layout** (return value of `improve()`, `Attempt.source_ref`):
+
+```
+versions/v_<id>/
+  ar/                 ← entrypoint.py (solve, improve)
+  harness/runtime/    ← score_repo, rollout, sandbox wiring (optional edits)
+```
+
+**Host vs candidate:** The running `python -m harness` process always uses the **host** `drive()` loop. Each candidate is evaluated by loading `ar/` from the snapshot; **reload of `harness/runtime/` from snapshot during eval** is follow-up (D-15b).
+
+**Action (landed):** `improve()` copies `ar/` + `harness/runtime/` into `versions/v_*`; meta-agent `cwd` = snapshot root; prompt lists editable vs frozen zones only (no spawn/coaching).
+
+**Acceptance:** After `improve()`, snapshot contains `ar/entrypoint.py` and `harness/runtime/score.py`; `load_ar(source_ref)` resolves `ar/` from snapshot root; tests green.
+
+**D-15b (TODO):** `evaluate()` imports `score_repo` / `rollout` from snapshot `harness/runtime/` when present.
+
+---
+
 ## DEFER — demo tradeoffs (do not block 5–10 gen run)
 
 | Topic | Decision |
@@ -322,5 +354,5 @@ Wire via `envs/pools.py::default_pools()` — used by CLI ([D-09](#d-09-outer-lo
 |------|--------|
 | 2026-05-30 | SSOT rewrite: actionable queue, merged dashboard spec, renumbered IDs, parallel-work rules |
 | 2026-05-30 | D-13: `ARCHITECTURE_DAG.md` approved for mechanical import refactor |
-| 2026-05-30 | Reconciled Alex `inner-loop/`: research → `proof/documentation/research/`; removed duplicate KernelBench spike + sol-scraper |
-| 2026-05-30 | Docs moved to `proof/documentation/`; stale `harness/modal/` removed |
+| 2026-05-30 | Flattened `proof/` (removed nested `documentation/`, mockups HTML) |
+| 2026-05-30 | Reconciled Alex `inner-loop/`: research notes → flat `proof/*.md`; removed KernelBench spike + sol-scraper |

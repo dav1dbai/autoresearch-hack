@@ -63,7 +63,7 @@ _STARTER_KERNEL = textwrap.dedent("""\
     Benchmark harness calls matmul repeatedly; median wall-time is scored.
 
     Starter is a pure-Python triple loop (deliberately slow) so the inner curve
-    has headroom to climb naive → vectorized → np.dot. See proof/documentation/DECISIONS.md path (A).
+    has headroom to climb naive → vectorized → np.dot. See proof/DECISIONS.md path (A).
     \"\"\"
     import numpy as np
 

@@ -3,7 +3,7 @@
 Everything in harness/ and envs/ imports these. The mutable ar/ folder implements
 the two entrypoint callables (Solve, Improve). The referee, selection rule,
 sandboxing, obs injection, and hack detection all live in harness/ and are never
-reachable from ar/.  See proof/documentation/DESIGN.md §3.
+reachable from ar/.  See proof/DESIGN.md §3.
 """
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ class StepResult(BaseModel):
     # done=True means STOP the inner search — the target reward was reached or an
     # unrecoverable terminal state was hit. It does NOT mean "this score() call
     # finished" (that is always true). Envs with no natural terminal state must
-    # return done=False so solve() keeps iterating until budget. See proof/documentation/DECISIONS.md D-00.
+    # return done=False so solve() keeps iterating until budget. See proof/DECISIONS.md D-00.
     done: bool = False
 
 
@@ -68,7 +68,7 @@ class Attempt(BaseModel):
     hack_flags: list[str] = Field(default_factory=list)
     cost: Budget
     trace_id: str = ""
-    source_ref: str = ""  # git commit / snapshot path of this ar/ version
+    source_ref: str = ""  # version snapshot root (versions/v_*/ with ar/ + harness/runtime/)
     train_rollouts: list[Rollout] = Field(default_factory=list)
     heldout_rollouts: list[Rollout] = Field(default_factory=list)
 
