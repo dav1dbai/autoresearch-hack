@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+  :root{--ink:#0f172a;--sub:#475569;--mut:#ea580c;--mut-bg:#fff7ed;
+    --add:#16a34a;--add-bg:#dcfce7;--ctx:#64748b;--violet:#7c3aed;}
+  *{box-sizing:border-box} html,body{margin:0;background:#fff}
+  body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;width:1240px;padding:30px 32px 22px;color:var(--ink)}
+  .kick{font-size:12.5px;font-weight:700;letter-spacing:1.2px;color:var(--mut);text-transform:uppercase;margin:0 0 6px}
+  h1{font-size:25px;font-weight:720;margin:0 0 4px;letter-spacing:.2px}
+  .sub{font-size:14px;color:var(--sub);margin:0 0 24px}
+  .sub .mono{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+  .card{border:1px solid #e2e8f0;border-radius:13px;padding:16px 17px;background:#fafafa}
+  .card .h{font-size:13px;font-weight:700;margin:0 0 7px;display:flex;align-items:center;gap:7px}
+  .card p{margin:0;font-size:13.5px;line-height:1.5;color:#334155}
+  .card.n .h{color:#2563eb} .card.c .h{color:var(--mut)} .card.w .h{color:var(--add)}
+  .code{border:1px solid #e2e8f0;border-radius:13px;overflow:hidden;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13.5px;line-height:1.62}
+  .code .bar{background:#f1f5f9;border-bottom:1px solid #e2e8f0;padding:9px 16px;font-family:-apple-system,system-ui,sans-serif;font-size:12.5px;font-weight:650;color:var(--sub)}
+  .code pre{margin:0;padding:14px 18px;white-space:pre;overflow-x:auto}
+  .ln{display:block;padding:0 4px}
+  .add{background:var(--add-bg);color:#14532d}
+  .ctx{color:var(--ctx)}
+  .cm{color:#94a3b8}
+  .foot{margin-top:22px;padding:14px 18px;background:var(--mut-bg);border:1px solid #fed7aa;border-radius:12px;font-size:13.5px;color:#7c2d12;line-height:1.55}
+  .foot b{color:#9a3412}
+</style></head><body>
+  <p class="kick">AR-level optimization · the outer loop editing its own inner loop</p>
+  <h1>AR² rewrote its own search strategy</h1>
+  <p class="sub">hero-gemm &nbsp;·&nbsp; <span class="mono">improve()</span> mutated <span class="mono">ar/solve</span> &nbsp; v1 → v2 &nbsp;·&nbsp; a meta-agent editing <span class="mono">ar/entrypoint.py</span>, not the kernel</p>
+
+  <div class="row">
+    <div class="card n">
+      <p class="h">🔍 What it noticed</p>
+      <p>v1's inner loop scored <i>every</i> iteration on the H100 — even when the agent's edit was a <b>no-op</b> (kernel byte-identical to the last best). Each one burned a ~30s GPU compile+run for zero information.</p>
+    </div>
+    <div class="card c">
+      <p class="h">✏️ What it changed</p>
+      <p>Added a content-diff guard in <span style="font-family:ui-monospace,Menlo,monospace">solve()</span>: if the workdir didn't actually change, count it stale and <b>skip the score</b> — plus a helper that compares files by size + bytes (ignoring <span style="font-family:ui-monospace,Menlo,monospace">agent.log</span>).</p>
+    </div>
+    <div class="card w">
+      <p class="h">⚡ Why it helps</p>
+      <p>The inner loop spends its compute budget on <b>real attempts</b>, not re-grading identical kernels — more climbing per unit compute, and stale-detection that reflects actual progress.</p>
+    </div>
+  </div>
+
+  <div class="code">
+    <div class="bar">ar/entrypoint.py &nbsp;·&nbsp; inside <span style="font-family:ui-monospace,Menlo,monospace">solve()</span> &nbsp;— the meta-edit (green = added by AR²)</div>
+    <pre><span class="ln ctx">            _run_agent(cmd, prompt, cwd=task.workdir, timeout=remaining)</span>
+<span class="ln ctx"></span>
+<span class="ln add">+           if not _workdir_differs(task.workdir, snap_dir):</span>
+<span class="ln add">+               stale_iters += 1</span>
+<span class="ln add">+               continue          <span class="cm"># agent made no real edit → don't burn a GPU score</span></span>
+<span class="ln ctx"></span>
+<span class="ln ctx">            candidate = Submission(workdir=task.workdir, notes=f"iter={iteration}")</span>
+<span class="ln ctx">            result = score(candidate)   <span class="cm"># H100 compile + run (~30s)</span></span>
+<span class="ln ctx"></span>
+<span class="ln add">+   def _workdir_differs(current, baseline) -> bool:</span>
+<span class="ln add">+       """True iff the agent actually changed a file (path set, size, or bytes)."""</span>
+<span class="ln add">+       if _enumerate_files(current) != _enumerate_files(baseline): return True</span>
+<span class="ln add">+       for rel in _enumerate_files(current):</span>
+<span class="ln add">+           if (current/rel).read_bytes() != (baseline/rel).read_bytes(): return True</span>
+<span class="ln add">+       return False</span></pre>
+  </div>
+
+  <div class="foot">
+    <b>Honest read:</b> held-out reward moved 0.4885 → 0.4920 — small, and within the noise floor at this rollout budget. The point isn't the number. It's that the outer loop <b>read its own search code, identified a real inefficiency, and patched it</b> — a legible, correct, self-directed optimization of <i>how it researches</i>. That's the second derivative in miniature.
+  </div>
+</body></html>
