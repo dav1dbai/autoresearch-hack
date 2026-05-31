@@ -27,13 +27,9 @@ Every agent action is traced to **Raindrop Workshop** — fully replayable:
 
 *A **frozen integrity kernel** (`drive`, the archive, the envs + their graders) runs the loop. The meta-agent only ever edits the **mutable** `ar/` + `harness/runtime/` snapshot. Every step syncs to **observability** — Raindrop Workshop, `ar2_workshop.db`, and the dashboard — so any run is fully replayable.*
 
-## Evolution
+## A meta-optimization, concretely
 
-![hero-gemm strategy lineage](docs/img/lineage.png)
-
-Each node is an AR² *version* — a `solve`+`improve` strategy bred by the meta-loop — colored by held-out reward (absolute 0→1). The best so far, **`v9` (0.5209)**, sits on the `v0→v3→v9` branch: the lineage where v3 enriched the `solve` prompt, shifting how the inner agent behaves. The signal is early — rewards cluster ~0.49–0.52 and single-rollout variance is real — but the structure is the claim: the system breeds, scores, and selects strategies, and gains ride identifiable lineages.
-
-A concrete look at *one* such meta-edit — the outer loop patching its own inner loop:
+The clearest thing the outer loop did — read its own search code and patch it:
 
 ![An AR-level optimization](docs/img/ar-optimization.png)
 
