@@ -21,6 +21,12 @@ Every agent action is traced to **Raindrop Workshop** — fully replayable:
 
 *A codex agent orienting inside a kernel workdir — reading the cheatsheet and the current kernel before it edits — every step captured as a span.*
 
+## Architecture
+
+![System architecture](docs/img/architecture.png)
+
+*A **frozen integrity kernel** (`drive`, the archive, the envs + their graders) runs the loop. The meta-agent only ever edits the **mutable** `ar/` + `harness/runtime/` snapshot. Every step syncs to **observability** — Raindrop Workshop, `ar2_workshop.db`, and the dashboard — so any run is fully replayable.*
+
 ## Repo layout
 
 **Mutation boundaries (D-15):** the meta-agent may only edit the mutable zone; everything that *defines or measures* the task is host-only.

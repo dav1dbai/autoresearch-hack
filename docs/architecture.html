@@ -1,0 +1,88 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+ html,body{margin:0;background:#fff;font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
+ body{padding:26px 20px 16px;width:1500px}
+ .ftitle{font-size:18px;font-weight:680;margin:0 0 16px;color:#0f172a}
+ .ftitle .tag{font-weight:500;color:#475569}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+ mermaid.initialize({startOnLoad:true, theme:'base', securityLevel:'loose',
+   themeVariables:{fontFamily:'-apple-system,system-ui,sans-serif',
+     primaryColor:'#ffffff', primaryBorderColor:'#475569', primaryTextColor:'#0f172a',
+     lineColor:'#64748b', fontSize:'14px'},
+   flowchart:{curve:'basis', nodeSpacing:48, rankSpacing:58, htmlLabels:true}});
+</script>
+</head><body>
+<div class="ftitle">System architecture <span class="tag">&mdash; how a run executes: a frozen integrity kernel, a mutable strategy that evolves, and full observability</span></div>
+<pre class="mermaid">
+flowchart TB
+    subgraph entry["Entry"]
+        CLI["uv run python -m harness<br/>--stub | --gpu | --cuda-oxide<br/>-K generations"]
+        SCR["scripts/modal_cuda_oxide.sh<br/>scripts/run_k3_modal_e2e.sh"]
+        ENV[".env: AR2_BACKEND · agents ·<br/>RAINDROP_WORKSHOP · keys"]
+        CLI --> DRIVE
+        SCR --> CLI
+        ENV --> CLI
+    end
+
+    subgraph host["Host-only — integrity kernel (FROZEN)"]
+        DRIVE["harness/loop/outer.py<br/>drive()"]
+        EVAL["evaluate()"]
+        ARCH["harness/loop/archive.py<br/>Attempt + JSONL"]
+        SNAP["harness/loop/snapshot.py<br/>create_version_snapshot()"]
+        SYNC["harness/tracing/sync.py<br/>sync_all → ar2_workshop.db + OTLP"]
+        POOLS["envs/pools.py<br/>matmul | gpu | cuda_oxide"]
+        ENVS["envs/* — referees + frozen graders<br/>(cuda_oxide · matmul · nanochat…)"]
+    end
+
+    subgraph mutable["Mutable — evolves each generation"]
+        AR0["ar/ — v0 seed<br/>entrypoint.py: solve + improve"]
+        VSNAP["versions/v_&lt;id&gt;/<br/>ar/ + harness/runtime/"]
+    end
+
+    DRIVE --> POOLS
+    POOLS --> ENVS
+    DRIVE -->|"1 · eval v0"| EVAL
+    EVAL -->|"source_ref = ar/"| AR0
+    DRIVE -->|"2 · repeat K times"| GEN
+
+    subgraph GEN["Each generation"]
+        SP["sample_parents()<br/>pick parent Attempts"]
+        IMPCTX["prepare_improve_context()<br/>archive digest + Raindrop spans"]
+        IMPROVE["improve() — meta-agent<br/>(codex / claude-code)"]
+        SMOKE["smoke_check_version_snapshot()"]
+        EVAL2["evaluate() each candidate"]
+        SP --> IMPCTX --> IMPROVE
+        IMPROVE --> SMOKE --> EVAL2
+    end
+
+    GEN --> ARCH
+    EVAL2 --> ARCH
+    EVAL --> ARCH
+    ARCH --> OBS
+    EVAL --> SYNC
+    EVAL2 --> SYNC
+
+    subgraph OBS["Science / observability"]
+        JSONL["obs/archive.jsonl"]
+        DB["obs/ar2_workshop.db"]
+        WS["Raindrop Workshop :5899"]
+        RPT["obs/report.html + run_events.jsonl"]
+        JSONL --> RPT
+        DB --> RPT
+        SYNC --> DB
+        SYNC --> WS
+    end
+
+    SNAP --> VSNAP
+    IMPROVE --> VSNAP
+    EVAL2 -->|"load ar/ from source_ref"| VSNAP
+
+    style entry fill:#eff6ff,stroke:#2563eb,color:#0f172a
+    style host fill:#f1f5f9,stroke:#475569,color:#0f172a
+    style mutable fill:#fff7ed,stroke:#ea580c,color:#0f172a
+    style GEN fill:#faf5ff,stroke:#7c3aed,color:#0f172a
+    style OBS fill:#f0fdf4,stroke:#16a34a,color:#0f172a
+</pre>
+</body></html>
