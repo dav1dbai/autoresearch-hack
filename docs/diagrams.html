@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AR² — flow diagrams</title>
+<style>
+  :root{
+    --ink:#0f172a; --sub:#475569; --line:#cbd5e1;
+    --outer:#7c3aed; --outer-bg:#faf5ff;
+    --inner:#2563eb; --inner-bg:#eff6ff;
+    --frozen:#475569; --frozen-bg:#f1f5f9;
+    --reward:#16a34a; --amber:#d97706;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);
+    font-family:-apple-system,"Segoe UI",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;padding:40px 28px 80px}
+  .wrap{max-width:1240px;margin:0 auto}
+  h1{font-size:22px;letter-spacing:.2px;margin:0 0 4px}
+  .lede{color:var(--sub);font-size:14px;margin:0 0 36px}
+  figure{margin:0 0 44px;background:#fff;border:1px solid var(--line);
+    border-radius:16px;padding:22px 24px 18px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+  figcaption{font-size:13px;color:var(--sub);margin-top:14px;line-height:1.5}
+  .ftitle{font-size:15px;font-weight:650;margin:0 0 14px;color:var(--ink)}
+  .ftitle .tag{font-weight:500;color:var(--sub)}
+  svg{display:block;width:100%;height:auto;font-family:inherit}
+  .bx-t{font-weight:650;font-size:14px}
+  .bx-s{font-size:12px;fill:var(--sub)}
+  .lbl{font-size:12px;font-weight:600}
+  code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px;
+    background:#f1f5f9;padding:1px 5px;border-radius:5px}
+  /* diagram 3 */
+  .cols{display:grid;grid-template-columns:1fr 44px 1fr;gap:0;align-items:stretch}
+  .col{padding:6px 4px}
+  .col h3{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.6px}
+  .edit h3{color:var(--inner)} .frozen h3{color:var(--frozen)}
+  .chip{display:block;border-radius:10px;padding:11px 13px;margin:9px 0;font-size:13.5px}
+  .chip .who{display:block;font-size:11.5px;color:var(--sub);margin-top:3px}
+  .edit .chip{background:var(--inner-bg);border:1px solid #bfdbfe}
+  .frozen .chip{background:var(--frozen-bg);border:1px solid var(--line)}
+  .divider{display:flex;align-items:center;justify-content:center;color:var(--line);font-size:24px}
+  .note{margin-top:16px;padding:11px 14px;background:#fffbeb;border:1px solid #fde68a;
+    border-radius:10px;font-size:13px;color:#92400e}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AR² &mdash; autoresearch on autoresearch</h1>
+  <p class="lede">Exact flow of the system. Screenshot each figure into the README.</p>
+
+  <!-- ============ FIGURE 1: the two nested loops + grader ============ -->
+  <figure>
+    <div class="ftitle">① The two loops <span class="tag">&mdash; the outer loop optimizes the <em>strategy</em>; the inner loop optimizes a <em>kernel</em></span></div>
+    <svg viewBox="0 0 1180 740" role="img" aria-label="nested loops">
+      <defs>
+        <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#334155"/>
+        </marker>
+        <marker id="av" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#7c3aed"/>
+        </marker>
+        <marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#16a34a"/>
+        </marker>
+      </defs>
+
+      <!-- OUTER container -->
+      <rect x="24" y="24" width="1132" height="246" rx="16" fill="var(--outer-bg)" stroke="var(--outer)" stroke-width="1.5"/>
+      <text x="44" y="50" class="lbl" fill="var(--outer)">OUTER LOOP &middot; AR&sup2; &nbsp;(<tspan font-family="ui-monospace,Menlo,monospace">drive</tspan> + <tspan font-family="ui-monospace,Menlo,monospace">improve</tspan>)</text>
+
+      <!-- outer boxes -->
+      <g>
+        <rect x="50"  y="112" width="170" height="96" rx="11" fill="#fff" stroke="var(--outer)" stroke-width="1.5"/>
+        <text text-anchor="middle"><tspan x="135" y="150" class="bx-t">π₀ seed strategy</tspan><tspan x="135" y="170" class="bx-s">ar/solve + ar/improve</tspan><tspan x="135" y="187" class="bx-s">(dumb single-edit)</tspan></text>
+
+        <rect x="278" y="112" width="186" height="96" rx="11" fill="#fff" stroke="var(--outer)" stroke-width="1.5"/>
+        <text text-anchor="middle"><tspan x="371" y="150" class="bx-t">evaluate πₖ</tspan><tspan x="371" y="170" class="bx-s">run πₖ.solve on</tspan><tspan x="371" y="187" class="bx-s">the kernel → curve</tspan></text>
+
+        <rect x="522" y="112" width="170" height="96" rx="11" fill="#fff" stroke="var(--outer)" stroke-width="1.5"/>
+        <text text-anchor="middle"><tspan x="607" y="146" class="bx-t">archive</tspan><tspan x="607" y="166" class="bx-s">strategies +</tspan><tspan x="607" y="183" class="bx-s">their climb curves</tspan></text>
+
+        <rect x="750" y="112" width="170" height="96" rx="11" fill="#fff" stroke="var(--outer)" stroke-width="1.5"/>
+        <text text-anchor="middle"><tspan x="835" y="146" class="bx-t">select parent</tspan><tspan x="835" y="166" class="bx-s">frontier, by</tspan><tspan x="835" y="183" class="bx-s">held-out reward</tspan></text>
+
+        <rect x="978" y="112" width="156" height="96" rx="11" fill="#fff" stroke="var(--outer)" stroke-width="1.5"/>
+        <text text-anchor="middle"><tspan x="1056" y="146" class="bx-t">improve()</tspan><tspan x="1056" y="166" class="bx-s">meta-agent edits</tspan><tspan x="1056" y="183" class="bx-s">a snapshot of ar/</tspan></text>
+      </g>
+      <!-- outer arrows -->
+      <line x1="220" y1="160" x2="272" y2="160" stroke="#334155" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="464" y1="160" x2="516" y2="160" stroke="#334155" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="692" y1="160" x2="744" y2="160" stroke="#334155" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="920" y1="160" x2="972" y2="160" stroke="#334155" stroke-width="1.6" marker-end="url(#a)"/>
+      <!-- return improve -> evaluate (over the top) -->
+      <path d="M1056,112 C1056,74 1056,74 920,74 L470,74 C400,74 371,74 371,108" fill="none" stroke="var(--outer)" stroke-width="1.6" stroke-dasharray="0" marker-end="url(#av)"/>
+      <text x="700" y="68" text-anchor="middle" class="lbl" fill="var(--outer)">π₍ₖ₊₁₎ &mdash; the next, hopefully-better researcher</text>
+
+      <!-- spawns arrow: evaluate -> inner -->
+      <path d="M371,208 C371,250 230,250 230,300" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a)"/>
+      <text x="312" y="262" class="bx-s" font-style="italic">spawns one solve run ↓</text>
+
+      <!-- INNER container -->
+      <rect x="24" y="300" width="760" height="230" rx="16" fill="var(--inner-bg)" stroke="var(--inner)" stroke-width="1.5"/>
+      <text x="44" y="326" class="lbl" fill="var(--inner)">INNER LOOP &middot; autoresearch &nbsp;(one <tspan font-family="ui-monospace,Menlo,monospace">solve</tspan> run)</text>
+
+      <rect x="48"  y="372" width="150" height="92" rx="11" fill="#fff" stroke="var(--inner)" stroke-width="1.5"/>
+      <text text-anchor="middle"><tspan x="123" y="408" class="bx-t">env.reset()</tspan><tspan x="123" y="428" class="bx-s">kernel.rs starter</tspan><tspan x="123" y="445" class="bx-s">+ CHEATSHEET</tspan></text>
+
+      <rect x="250" y="372" width="186" height="92" rx="11" fill="#fff" stroke="var(--inner)" stroke-width="1.5"/>
+      <text text-anchor="middle"><tspan x="343" y="402" class="bx-t">codex edits kernel.rs</tspan><tspan x="343" y="422" class="bx-s">sees last reward</tspan><tspan x="343" y="439" class="bx-s">+ feedback</tspan></text>
+
+      <rect x="488" y="372" width="120" height="92" rx="11" fill="#fff" stroke="var(--inner)" stroke-width="1.5"/>
+      <text text-anchor="middle"><tspan x="548" y="414" class="bx-t">score()</tspan><tspan x="548" y="434" class="bx-s">ship kernel ↓</tspan></text>
+
+      <rect x="648" y="372" width="116" height="92" rx="11" fill="#fff" stroke="var(--amber)" stroke-width="1.5"/>
+      <text text-anchor="middle"><tspan x="706" y="408" class="bx-t" fill="var(--amber)">reward ↑ ?</tspan><tspan x="706" y="430" class="bx-s">keep / revert</tspan></text>
+
+      <line x1="198" y1="418" x2="244" y2="418" stroke="#334155" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="436" y1="418" x2="482" y2="418" stroke="#334155" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="608" y1="418" x2="642" y2="418" stroke="#334155" stroke-width="1.6" marker-end="url(#a)"/>
+      <!-- loop back reward? -> edit -->
+      <path d="M706,464 C706,500 343,500 343,468" fill="none" stroke="var(--amber)" stroke-width="1.6" marker-end="url(#a)"/>
+      <text x="520" y="514" text-anchor="middle" class="bx-s" font-style="italic">next iteration (hill-climb)</text>
+
+      <!-- GRADER container -->
+      <rect x="808" y="300" width="348" height="230" rx="16" fill="var(--frozen-bg)" stroke="var(--frozen)" stroke-width="1.5"/>
+      <text x="828" y="326" class="lbl" fill="var(--frozen)">GRADER &middot; deployed H100 &middot; 🔒 FROZEN</text>
+      <rect x="832" y="360" width="300" height="146" rx="11" fill="#fff" stroke="var(--frozen)" stroke-width="1.5"/>
+      <text text-anchor="middle">
+        <tspan x="982" y="392" class="bx-t">referee (agent never sees it)</tspan>
+        <tspan x="982" y="416" class="bx-s">splice kernel → FIXED host</tspan>
+        <tspan x="982" y="434" class="bx-s">cargo oxide → PTX → run on GPU</tspan>
+        <tspan x="982" y="452" class="bx-s">measure throughput</tspan>
+        <tspan x="982" y="470" class="bx-s">+ correctness oracle</tspan>
+        <tspan x="982" y="494" class="lbl" fill="var(--reward)">reward = clip(GFLOPS/target,0,1)·correct</tspan>
+      </text>
+      <!-- score <-> grader -->
+      <line x1="600" y1="402" x2="828" y2="402" stroke="#334155" stroke-width="1.6" marker-end="url(#a)"/>
+      <text x="690" y="394" text-anchor="middle" class="bx-s">kernel.rs</text>
+      <line x1="828" y1="440" x2="600" y2="440" stroke="#16a34a" stroke-width="1.6" marker-end="url(#ag)"/>
+      <text x="700" y="458" text-anchor="middle" class="bx-s" fill="var(--reward)">reward</text>
+    </svg>
+    <figcaption><strong>Inner</strong>: an agent edits a real kernel to climb a verifiable reward. <strong>Outer</strong>: a meta-agent rewrites the inner agent's own <code>solve</code> strategy, generation after generation. The <strong>grader</strong> lives outside everything either agent can edit.</figcaption>
+  </figure>
+
+  <!-- ============ FIGURE 2: the second derivative ============ -->
+  <figure>
+    <div class="ftitle">② The claim <span class="tag">&mdash; not "reach higher", but "climb faster per unit compute"</span></div>
+    <svg viewBox="0 0 1180 520" role="img" aria-label="family of climb curves">
+      <defs>
+        <marker id="ax" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/></marker>
+      </defs>
+      <!-- axes -->
+      <line x1="110" y1="60" x2="110" y2="430" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ax)"/>
+      <line x1="110" y1="430" x2="1080" y2="430" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#ax)"/>
+      <text x="92" y="72" text-anchor="end" class="bx-s">R</text>
+      <text x="60" y="250" text-anchor="middle" class="lbl" fill="var(--sub)" transform="rotate(-90 60 250)">reward (verifiable)</text>
+      <text x="1070" y="456" text-anchor="end" class="lbl" fill="var(--sub)">inner compute  c  (attempts × wall)</text>
+      <line x1="106" y1="90" x2="114" y2="90" stroke="#94a3b8" stroke-width="1.4"/>
+      <text x="98" y="94" text-anchor="end" class="bx-s">1.0</text>
+
+      <!-- curves: each steeper & higher than the last -->
+      <!-- pi_0 : shallow, plateaus low -->
+      <path d="M110,430 C320,400 520,360 760,348 C900,341 1000,338 1060,337" fill="none" stroke="#94a3b8" stroke-width="3"/>
+      <circle cx="1060" cy="337" r="4.5" fill="#94a3b8"/>
+      <text x="1075" y="341" class="lbl" fill="#94a3b8">π₀ (seed: slow, low ceiling)</text>
+      <!-- pi_1 -->
+      <path d="M110,430 C300,360 470,270 720,232 C860,212 980,205 1060,202" fill="none" stroke="#60a5fa" stroke-width="3"/>
+      <circle cx="1060" cy="202" r="4.5" fill="#60a5fa"/>
+      <text x="1075" y="206" class="lbl" fill="#3b82f6">π₁</text>
+      <!-- pi_k -->
+      <path d="M110,430 C260,300 380,190 600,140 C760,104 920,96 1060,93" fill="none" stroke="#7c3aed" stroke-width="3.2"/>
+      <circle cx="1060" cy="93" r="4.5" fill="#7c3aed"/>
+      <text x="1075" y="97" class="lbl" fill="#7c3aed">π_K (steeper, sooner, higher)</text>
+
+      <!-- annotation of the bend -->
+      <path d="M250,392 C250,300 250,220 250,150" fill="none" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="4 4"/>
+      <text x="262" y="476" class="bx-s">outer loop (k →) bends every climb up &amp; left</text>
+      <text x="600" y="476" class="lbl" fill="var(--outer)">∂R/∂c rises with k  ⇒  ∂²R / ∂c ∂k &gt; 0</text>
+    </svg>
+    <figcaption>Each curve is one strategy's climb on a fixed kernel. The outer loop's job is to make each successive curve <strong>steeper and earlier</strong> — later researchers reach the same reward with less compute. That bend, generation over generation, is the second derivative.</figcaption>
+  </figure>
+
+  <!-- ============ FIGURE 3: integrity boundary ============ -->
+  <figure>
+    <div class="ftitle">③ What each layer may edit <span class="tag">&mdash; why the reward can't be hacked</span></div>
+    <div class="cols">
+      <div class="col edit">
+        <h3>Agent-editable</h3>
+        <span class="chip"><code>kernel.rs</code> &mdash; the solution<span class="who">inner loop · solve()</span></span>
+        <span class="chip"><code>ar/solve</code>, <code>ar/improve</code> &mdash; the strategy<span class="who">outer loop · improve()</span></span>
+        <span class="chip"><code>harness/runtime/</code> &mdash; rollout orchestration<span class="who">outer loop · improve()</span></span>
+      </div>
+      <div class="divider">→ &nbsp;┃</div>
+      <div class="col frozen">
+        <h3>Frozen · host-only</h3>
+        <span class="chip"><code>envs/</code> &mdash; the reward function<span class="who">defines what "better" means</span></span>
+        <span class="chip">grader app (H100) &mdash; timing + correctness<span class="who">runs outside the agent's reach</span></span>
+        <span class="chip"><code>contracts</code> · <code>drive</code> · <code>loop/</code><span class="who">the experimental scaffold</span></span>
+      </div>
+    </div>
+    <div class="note"><strong>Integrity boundary:</strong> the grader sits outside everything either agent can touch — so the only way to raise the number is to make a genuinely faster, correct kernel. A score the optimizer can reach is a vanity number.</div>
+  </figure>
+
+</div>
+</body>
+</html>
